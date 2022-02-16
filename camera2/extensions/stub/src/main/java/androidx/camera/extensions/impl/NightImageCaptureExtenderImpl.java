@@ -17,8 +17,6 @@ package androidx.camera.extensions.impl;
 
 import android.content.Context;
 import android.hardware.camera2.CameraCharacteristics;
-import android.hardware.camera2.CaptureRequest;
-import android.hardware.camera2.CaptureResult;
 import android.util.Pair;
 import android.util.Range;
 import android.util.Size;
@@ -98,18 +96,6 @@ public final class NightImageCaptureExtenderImpl implements ImageCaptureExtender
     @Nullable
     @Override
     public Range<Long> getEstimatedCaptureLatencyRange(@NonNull Size captureOutputSize) {
-        throw new RuntimeException("Stub, replace with implementation.");
-    }
-
-    @Nullable
-    @Override
-    public List<CaptureRequest.Key> getAvailableCaptureRequestKeys() {
-        throw new RuntimeException("Stub, replace with implementation.");
-    }
-
-    @Nullable
-    @Override
-    public List<CaptureResult.Key> getAvailableCaptureResultKeys() {
         throw new RuntimeException("Stub, replace with implementation.");
     }
 }
