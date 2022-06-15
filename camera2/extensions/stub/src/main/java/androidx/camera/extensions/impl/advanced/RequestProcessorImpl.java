@@ -26,7 +26,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * An Interface to execute Camera2 capture requests.
+ * A Interface to execute requests.
  */
 @SuppressLint("UnknownNullness")
 public interface RequestProcessorImpl {
@@ -38,24 +38,23 @@ public interface RequestProcessorImpl {
     /**
      * Submits a request.
      * @return the id of the capture sequence or -1 in case the processor encounters a fatal error
-     *         or receives an invalid argument.
+     *         or receives and invalid argument.
      */
     int submit(Request request, Callback callback);
 
     /**
      * Submits a list of requests.
      * @return the id of the capture sequence or -1 in case the processor encounters a fatal error
-     *         or receives an invalid argument.
+     *         or receives and invalid argument.
      */
     int submit(List<Request> requests, Callback callback);
 
     /**
      * Set repeating requests.
      * @return the id of the capture sequence or -1 in case the processor encounters a fatal error
-     *         or receives an invalid argument.
+     *         or receives and invalid argument.
      */
     int setRepeating(Request request, Callback callback);
-
 
     /**
      * Abort captures.

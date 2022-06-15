@@ -18,17 +18,13 @@ package androidx.camera.extensions.impl;
 
 import android.content.Context;
 import android.hardware.camera2.CameraCharacteristics;
-import android.hardware.camera2.CaptureResult;
 import android.hardware.camera2.TotalCaptureResult;
-import android.hardware.camera2.params.MeteringRectangle;
 import android.media.ImageWriter;
 import android.media.Image;
 import android.util.Pair;
 import android.util.Size;
 import android.view.Surface;
 
-import java.util.ArrayList;
-import java.util.concurrent.Executor;
 import java.util.List;
 
 /**
@@ -63,14 +59,8 @@ public final class HdrPreviewExtenderImpl implements PreviewExtenderImpl {
     @Override
     public boolean isExtensionAvailable(String cameraId,
             CameraCharacteristics cameraCharacteristics) {
-        boolean zoomRatioSupported =
-            CameraCharacteristicAvailability.supportsZoomRatio(cameraCharacteristics);
-        boolean hasFocuser =
-            CameraCharacteristicAvailability.hasFocuser(cameraCharacteristics);
-
-        // Requires API 23 for ImageWriter
-        return (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) &&
-                zoomRatioSupported && hasFocuser;
+        // Implement the logic to check whether the extension function is supported or not.
+        return true;
     }
 
     /**
@@ -133,58 +123,6 @@ public final class HdrPreviewExtenderImpl implements PreviewExtenderImpl {
         @Override
         public void process(Image image, TotalCaptureResult result) {
             mWriter.queueInputImage(image);
-        }
-
-        @Override
-        public void process(Image image, TotalCaptureResult result,
-                ProcessResultImpl resultCallback, Executor executor) {
-            if ((resultCallback != null) && (result != null)) {
-                ArrayList<Pair<CaptureResult.Key, Object>> captureResults = new ArrayList<>();
-                Long shutterTimestamp = result.get(CaptureResult.SENSOR_TIMESTAMP);
-                if (shutterTimestamp != null) {
-                    Float zoomRatio = result.get(CaptureResult.CONTROL_ZOOM_RATIO);
-                    if (zoomRatio != null) {
-                        captureResults.add(new Pair<>(CaptureResult.CONTROL_ZOOM_RATIO, zoomRatio));
-                    }
-                    Integer afMode = result.get(CaptureResult.CONTROL_AF_MODE);
-                    if (afMode != null) {
-                        captureResults.add(new Pair<>(CaptureResult.CONTROL_AF_MODE, afMode));
-                    }
-                    Integer afTrigger = result.get(CaptureResult.CONTROL_AF_TRIGGER);
-                    if (afTrigger != null) {
-                        captureResults.add(new Pair<>(CaptureResult.CONTROL_AF_TRIGGER, afTrigger));
-                    }
-                    Integer afState = result.get(CaptureResult.CONTROL_AF_STATE);
-                    if (afState != null) {
-                        captureResults.add(new Pair<>(CaptureResult.CONTROL_AF_STATE, afState));
-                    }
-                    MeteringRectangle[] afRegions = result.get(CaptureResult.CONTROL_AF_REGIONS);
-                    if (afRegions != null) {
-                        captureResults.add(new Pair<>(CaptureResult.CONTROL_AF_REGIONS, afRegions));
-                    }
-
-
-                    Byte jpegQuality = result.get(CaptureResult.JPEG_QUALITY);
-                    if (jpegQuality != null) {
-                        captureResults.add(new Pair<>(CaptureResult.JPEG_QUALITY, jpegQuality));
-                    }
-
-                    Integer jpegOrientation = result.get(CaptureResult.JPEG_ORIENTATION);
-                    if (jpegOrientation != null) {
-                        captureResults.add(new Pair<>(CaptureResult.JPEG_ORIENTATION,
-                                jpegOrientation));
-                    }
-
-                    if (executor != null) {
-                        executor.execute(() -> resultCallback.onCaptureCompleted(shutterTimestamp,
-                                captureResults));
-                    } else {
-                        resultCallback.onCaptureCompleted(shutterTimestamp, captureResults);
-                    }
-                }
-            }
-
-            process(image, result);
         }
 
         @Override

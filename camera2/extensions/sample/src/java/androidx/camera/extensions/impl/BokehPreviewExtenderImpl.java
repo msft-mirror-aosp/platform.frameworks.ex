@@ -68,8 +68,7 @@ public final class BokehPreviewExtenderImpl implements PreviewExtenderImpl {
             return false;
         }
 
-        return CameraCharacteristicAvailability.isWBModeAvailable(cameraCharacteristics, MODE) &&
-            CameraCharacteristicAvailability.hasFlashUnit(cameraCharacteristics);
+        return CameraCharacteristicAvailability.isWBModeAvailable(cameraCharacteristics, MODE);
     }
 
     /**
