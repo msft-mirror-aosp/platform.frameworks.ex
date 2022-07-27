@@ -132,6 +132,7 @@ public final class BokehImageCaptureExtenderImpl implements ImageCaptureExtender
                                 uByteBuffer.put(result.first.getPlanes()[2].getBuffer());
                                 vByteBuffer.put(result.first.getPlanes()[1].getBuffer());
 
+                                image.setTimestamp(result.first.getTimestamp());
                                 mImageWriter.queueInputImage(image);
                             }
                         }

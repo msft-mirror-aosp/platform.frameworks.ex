@@ -163,6 +163,8 @@ public final class HdrImageCaptureExtenderImpl implements ImageCaptureExtenderIm
                             uByteBuffer.put(imageDataPairs.get(1).first.getPlanes()[2].getBuffer());
                             vByteBuffer.put(imageDataPairs.get(1).first.getPlanes()[1].getBuffer());
 
+                            image.setTimestamp(imageDataPairs.get(
+                                        UNDER_STAGE_ID).first.getTimestamp());
                             mImageWriter.queueInputImage(image);
                         }
 
