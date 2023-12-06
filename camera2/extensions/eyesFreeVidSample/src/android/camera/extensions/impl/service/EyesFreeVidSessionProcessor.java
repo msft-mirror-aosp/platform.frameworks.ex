@@ -18,19 +18,27 @@ package android.camera.extensions.impl.service;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.Executor;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import android.annotation.FlaggedApi;
 import android.annotation.NonNull;
 import android.camera.extensions.impl.service.EyesFreeVidService.AdvancedExtenderEyesFreeImpl;
+import android.graphics.PointF;
+import android.graphics.Rect;
 import android.hardware.camera2.CameraAccessException;
+import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CameraDevice;
 import android.hardware.camera2.CaptureFailure;
 import android.hardware.camera2.CaptureRequest;
 import android.hardware.camera2.CaptureResult;
+import android.hardware.camera2.ExtensionCaptureRequest;
+import android.hardware.camera2.ExtensionCaptureResult;
 import android.hardware.camera2.TotalCaptureResult;
 import android.hardware.camera2.extension.CameraOutputSurface;
 import android.hardware.camera2.extension.CharacteristicsMap;
@@ -71,7 +79,7 @@ public class EyesFreeVidSessionProcessor extends SessionProcessor {
 
     protected final Object mParametersLock = new Object();
     @GuardedBy("mParametersLock")
-    protected List<Pair<CaptureRequest.Key, Object>> mParameters = new ArrayList<>();
+    protected HashMap<CaptureRequest.Key, Object> mParametersMap = new HashMap<>();
 
     protected AtomicInteger mNextCaptureSequenceId = new AtomicInteger(1);
 
@@ -83,6 +91,8 @@ public class EyesFreeVidSessionProcessor extends SessionProcessor {
     protected AdvancedExtenderEyesFreeImpl mAdvancedExtender;
     protected ImageReader mPreviewImageReader;
     protected String mCameraId;
+
+    protected AtomicBoolean mOnCaptureSessionEndStarted = new AtomicBoolean(false);
 
     @FlaggedApi(Flags.FLAG_CONCERT_MODE)
     protected EyesFreeVidSessionProcessor(AdvancedExtenderEyesFreeImpl advancedExtender) {
@@ -182,6 +192,12 @@ public class EyesFreeVidSessionProcessor extends SessionProcessor {
     @FlaggedApi(Flags.FLAG_CONCERT_MODE)
     @Override
     public void onCaptureSessionEnd() {
+        mOnCaptureSessionEndStarted.set(true);
+
+        if (mRequestProcessor != null) {
+            mRequestProcessor.abortCaptures();
+        }
+
         mRequestProcessor = null;
     }
 
@@ -192,10 +208,9 @@ public class EyesFreeVidSessionProcessor extends SessionProcessor {
         List<Integer> outputConfigIds = new ArrayList<>(List.of(PREVIEW_OUTPUT_ID));
 
         RequestProcessor.Request requestRes;
-        synchronized (mParametersLock) {
-            requestRes = new RequestProcessor.Request(outputConfigIds, mParameters,
-                    CameraDevice.TEMPLATE_PREVIEW);
-        }
+
+        requestRes = new RequestProcessor.Request(outputConfigIds, convertParameterMapToList(),
+                CameraDevice.TEMPLATE_PREVIEW);
 
         final int seqId = mNextCaptureSequenceId.getAndIncrement();
 
@@ -203,7 +218,9 @@ public class EyesFreeVidSessionProcessor extends SessionProcessor {
             @Override
             public void onCaptureStarted(RequestProcessor.Request request, long frameNumber,
                     long timestamp) {
-                captureCallback.onCaptureStarted(seqId, timestamp);
+                if (!mOnCaptureSessionEndStarted.get()) {
+                    captureCallback.onCaptureStarted(seqId, timestamp);
+                }
             }
 
             @Override
@@ -214,30 +231,40 @@ public class EyesFreeVidSessionProcessor extends SessionProcessor {
             @Override
             public void onCaptureCompleted(RequestProcessor.Request request,
                     TotalCaptureResult totalCaptureResult) {
-                addCaptureResultKeys(seqId, totalCaptureResult, captureCallback);
-                captureCallback.onCaptureProcessStarted(seqId);
+                if (!mOnCaptureSessionEndStarted.get()) {
+                    addCaptureResultKeys(seqId, totalCaptureResult, captureCallback, request);
+                    captureCallback.onCaptureProcessStarted(seqId);
+                }
             }
 
             @Override
             public void onCaptureFailed(RequestProcessor.Request request,
                     CaptureFailure captureFailure) {
-                captureCallback.onCaptureFailed(seqId);
+                if (!mOnCaptureSessionEndStarted.get()) {
+                    captureCallback.onCaptureFailed(seqId);
+                }
             }
 
             @Override
             public void onCaptureBufferLost(RequestProcessor.Request request,
                     long frameNumber, int outputStreamId) {
-                captureCallback.onCaptureFailed(seqId);
+                if (!mOnCaptureSessionEndStarted.get()) {
+                    captureCallback.onCaptureFailed(seqId);
+                }
             }
 
             @Override
             public void onCaptureSequenceCompleted(int sequenceId, long frameNumber) {
-                captureCallback.onCaptureSequenceCompleted(seqId);
+                if (!mOnCaptureSessionEndStarted.get()) {
+                    captureCallback.onCaptureSequenceCompleted(seqId);
+                }
             }
 
             @Override
             public void onCaptureSequenceAborted(int sequenceId) {
-                captureCallback.onCaptureSequenceAborted(seqId);
+                if (!mOnCaptureSessionEndStarted.get()) {
+                    captureCallback.onCaptureSequenceAborted(seqId);
+                }
             }
         };
 
@@ -253,7 +280,8 @@ public class EyesFreeVidSessionProcessor extends SessionProcessor {
     protected void addCaptureResultKeys(
         @NonNull int seqId,
         @NonNull TotalCaptureResult result,
-        @NonNull CaptureCallback captureCallback) {
+        @NonNull CaptureCallback captureCallback,
+        @NonNull RequestProcessor.Request request) {
 
         CameraMetadataNative cameraMetadataNative = new CameraMetadataNative();
         long vendorId = mAdvancedExtender.getMetadataVendorId(mCameraId);
@@ -269,10 +297,88 @@ public class EyesFreeVidSessionProcessor extends SessionProcessor {
                     cameraMetadataNative.set(key, result.get(key));
                 }
             }
+
+            synchronized (mParametersLock) {
+                List<Pair<CaptureRequest.Key, Object>> requestParameters = request.getParameters();
+                boolean autoZoomEnabled = false;
+                boolean stabilizationModeLocked = false;
+                for (Pair<CaptureRequest.Key, Object> parameter : requestParameters) {
+                    if (ExtensionCaptureRequest.EFV_AUTO_ZOOM.equals(parameter.first)) {
+                        cameraMetadataNative.set(ExtensionCaptureResult.EFV_AUTO_ZOOM,
+                                (boolean) parameter.second);
+                        autoZoomEnabled = (boolean) parameter.second;
+                        if (autoZoomEnabled &&
+                                ExtensionCaptureRequest.EFV_MAX_PADDING_ZOOM_FACTOR.equals(
+                                parameter.first)) {
+                            cameraMetadataNative.set(
+                                    ExtensionCaptureResult.EFV_MAX_PADDING_ZOOM_FACTOR,
+                                    (Float) parameter.second);
+                        }
+                    }
+                    if (ExtensionCaptureRequest.EFV_PADDING_ZOOM_FACTOR.equals(parameter.first)) {
+                        cameraMetadataNative.set(ExtensionCaptureResult.EFV_PADDING_ZOOM_FACTOR,
+                                (Float) parameter.second);
+                    }
+                    if (ExtensionCaptureRequest.EFV_TRANSLATE_VIEWPORT.equals(parameter.first)) {
+                        cameraMetadataNative.set(ExtensionCaptureResult.EFV_TRANSLATE_VIEWPORT,
+                                (Pair<Integer, Integer>) parameter.second);
+                    }
+                    if (ExtensionCaptureRequest.EFV_ROTATE_VIEWPORT.equals(parameter.first)) {
+                        cameraMetadataNative.set(ExtensionCaptureResult.EFV_ROTATE_VIEWPORT,
+                                (Float) parameter.second);
+                    }
+                    if (ExtensionCaptureRequest.EFV_STABILIZATION_MODE.equals(parameter.first)) {
+                        if (ExtensionCaptureRequest.EFV_STABILIZATION_MODE_LOCKED ==
+                                (int) parameter.second) {
+                            stabilizationModeLocked = true;
+                            int[] samplePaddingRegion = {5, 5, 5, 5};
+                            cameraMetadataNative.set(ExtensionCaptureResult.EFV_PADDING_REGION,
+                                    samplePaddingRegion);
+                            CameraCharacteristics cameraCharacteristics =
+                                    mAdvancedExtender.getCameraCharacteristics();
+                            Rect arraySize = cameraCharacteristics.get(
+                                    CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE);
+                            int centerX = arraySize.width() / 2;
+                            int centerY = arraySize.height() / 2;
+                            int squareSize = 5;
+                            PointF[] sampleTargetCoordinates = new PointF[]{
+                                    new PointF(centerX - squareSize, centerY - squareSize),
+                                    new PointF(centerX + squareSize, centerY - squareSize),
+                                    new PointF(centerX + squareSize, centerY + squareSize),
+                                    new PointF(centerX - squareSize, centerY + squareSize)
+                            };
+                            cameraMetadataNative.set(ExtensionCaptureResult.EFV_TARGET_COORDINATES,
+                                    sampleTargetCoordinates);
+                        }
+                    }
+                }
+
+                if (autoZoomEnabled && stabilizationModeLocked) {
+                    int[] sampleAutoZoomPaddingRegion = {3, 3, 3, 3};
+                    cameraMetadataNative.set(ExtensionCaptureResult.EFV_AUTO_ZOOM_PADDING_REGION,
+                            sampleAutoZoomPaddingRegion);
+                }
+            }
+
             CaptureResult captureResult = new CaptureResult(cameraMetadataNative, seqId);
             captureCallback.onCaptureCompleted(shutterTimestamp, seqId,
                     captureResult);
         }
+    }
+
+    protected List<Pair<CaptureRequest.Key, Object>> convertParameterMapToList() {
+        List<Pair<CaptureRequest.Key, Object>> mParametersList = new ArrayList<>();
+
+        synchronized(mParametersLock) {
+            for (Map.Entry<CaptureRequest.Key, Object> entry : mParametersMap.entrySet()) {
+                CaptureRequest.Key key = entry.getKey();
+                Object value = entry.getValue();
+                Pair<CaptureRequest.Key, Object> pair = new Pair<>(key, value);
+                mParametersList.add(pair);
+            }
+        }
+
+        return mParametersList;
     }
 
     @FlaggedApi(Flags.FLAG_CONCERT_MODE)
@@ -288,10 +394,8 @@ public class EyesFreeVidSessionProcessor extends SessionProcessor {
         List<Integer> outputConfigIds = new ArrayList<>(List.of(CAPTURE_OUTPUT_ID));
 
         RequestProcessor.Request requestRes;
-        synchronized (mParametersLock) {
-            requestRes = new RequestProcessor.Request(outputConfigIds, mParameters,
+        requestRes = new RequestProcessor.Request(outputConfigIds, convertParameterMapToList(),
                     CameraDevice.TEMPLATE_PREVIEW);
-        }
 
         final int seqId = mNextCaptureSequenceId.getAndIncrement();
 
@@ -312,7 +416,7 @@ public class EyesFreeVidSessionProcessor extends SessionProcessor {
             @Override
             public void onCaptureCompleted(RequestProcessor.Request request,
                     TotalCaptureResult totalCaptureResult) {
-                addCaptureResultKeys(seqId, totalCaptureResult, captureCallback);
+                addCaptureResultKeys(seqId, totalCaptureResult, captureCallback, request);
             }
 
             @Override
@@ -376,7 +480,7 @@ public class EyesFreeVidSessionProcessor extends SessionProcessor {
             @Override
             public void onCaptureCompleted(RequestProcessor.Request request,
                     TotalCaptureResult totalCaptureResult) {
-                addCaptureResultKeys(seqId, totalCaptureResult, captureCallback);
+                addCaptureResultKeys(seqId, totalCaptureResult, captureCallback, request);
             }
 
             @Override
@@ -432,9 +536,16 @@ public class EyesFreeVidSessionProcessor extends SessionProcessor {
     @Override
     public void setParameters(@NonNull CaptureRequest captureRequest) {
         synchronized (mParametersLock) {
-            for (CaptureRequest.Key<?> key : captureRequest.getKeys()) {
-                Object value = captureRequest.get(key);
-                mParameters.add(new Pair<>(key, value));
+
+            List<CaptureRequest.Key> supportedCaptureRequestKeys =
+                    mAdvancedExtender.getAvailableCaptureRequestKeys(mCameraId);
+            List<CaptureRequest.Key<?>> requestedCaptureRequestKeys =
+                    captureRequest.getKeys();
+            for (CaptureRequest.Key<?> key : requestedCaptureRequestKeys) {
+                if (supportedCaptureRequestKeys.contains(key)) {
+                    Object value = captureRequest.get(key);
+                    mParametersMap.put(key, value);
+                }
             }
         }
     }
