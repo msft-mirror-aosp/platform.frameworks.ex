@@ -39,6 +39,7 @@ import android.hardware.camera2.extension.ExtensionOutputConfiguration;
 import android.hardware.camera2.extension.RequestProcessor;
 import android.hardware.camera2.extension.SessionProcessor;
 import android.hardware.camera2.impl.CameraMetadataNative;
+import android.hardware.camera2.utils.SurfaceUtils;
 import android.media.Image;
 import android.media.ImageReader;
 import android.media.ImageWriter;
@@ -114,7 +115,7 @@ public class EyesFreeVidSessionProcessor extends SessionProcessor {
         if (previewSurface.getSurface() != null) {
             mPreviewImageReader = ImageReader.newInstance(previewSurface.getSize().getWidth(),
                     previewSurface.getSize().getHeight(), previewSurface.getImageFormat(),
-                    MAX_NUM_IMAGES);
+                    MAX_NUM_IMAGES, SurfaceUtils.getSurfaceUsage(previewSurface.getSurface()));
 
             List<CameraOutputSurface> previewList = new ArrayList<>(List.of(
                     new CameraOutputSurface(mPreviewImageReader.getSurface(),
