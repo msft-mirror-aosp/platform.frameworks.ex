@@ -39,4 +39,9 @@ public interface OutputSurfaceImpl {
      * Gets the image format.
      */
     int getImageFormat();
+
+    /**
+     * Gets the dataspace.
+     */
+    int getDataspace();
 }

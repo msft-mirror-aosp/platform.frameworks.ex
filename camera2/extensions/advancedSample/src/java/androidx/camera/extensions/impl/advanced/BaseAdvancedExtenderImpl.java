@@ -31,6 +31,7 @@ import android.hardware.camera2.CaptureRequest;
 import android.hardware.camera2.CaptureResult;
 import android.hardware.camera2.TotalCaptureResult;
 import android.hardware.camera2.params.StreamConfigurationMap;
+import android.hardware.DataSpace;
 import android.media.Image;
 import android.media.Image.Plane;
 import android.media.ImageWriter;
@@ -112,7 +113,8 @@ public abstract class BaseAdvancedExtenderImpl implements AdvancedExtenderImpl {
 
     @Override
     public Map<Integer, List<Size>> getSupportedCaptureOutputResolutions(String cameraId) {
-        return filterOutputResolutions(Arrays.asList(ImageFormat.JPEG, ImageFormat.YUV_420_888));
+        return filterOutputResolutions(Arrays.asList(ImageFormat.JPEG, ImageFormat.YUV_420_888,
+                ImageFormat.JPEG_R));
     }
 
     @Override
@@ -157,6 +159,8 @@ public abstract class BaseAdvancedExtenderImpl implements AdvancedExtenderImpl {
 
         protected AtomicInteger mNextCaptureSequenceId = new AtomicInteger(1);
 
+        protected boolean mProcessCapture = true;
+
         protected void appendTag(String tag) {
             TAG += tag;
         }
@@ -192,17 +196,32 @@ public abstract class BaseAdvancedExtenderImpl implements AdvancedExtenderImpl {
 
             // Image Capture
             if (mCaptureOutputSurfaceConfig.getSurface() != null) {
-                Camera2OutputConfigImplBuilder captureOutputConfigBuilder;
 
-                captureOutputConfigBuilder =
-                        Camera2OutputConfigImplBuilder.newImageReaderConfig(
-                                mCaptureOutputSurfaceConfig.getSize(),
-                                ImageFormat.YUV_420_888,
-                                BASIC_CAPTURE_PROCESS_MAX_IMAGES);
+                // For this sample, JPEG_R will not be processed
+                if (isJpegR(mCaptureOutputSurfaceConfig)) {
+                    Camera2OutputConfigImplBuilder captureOutputConfigBuilder;
 
-                mCaptureOutputConfig = captureOutputConfigBuilder.build();
+                    captureOutputConfigBuilder =
+                            Camera2OutputConfigImplBuilder.newSurfaceConfig(
+                                        mCaptureOutputSurfaceConfig.getSurface());
 
-                builder.addOutputConfig(mCaptureOutputConfig);
+                    mCaptureOutputConfig = captureOutputConfigBuilder.build();
+
+                    builder.addOutputConfig(mCaptureOutputConfig);
+                    mProcessCapture = false;
+                } else {
+                    Camera2OutputConfigImplBuilder captureOutputConfigBuilder;
+
+                    captureOutputConfigBuilder =
+                            Camera2OutputConfigImplBuilder.newImageReaderConfig(
+                                    mCaptureOutputSurfaceConfig.getSize(),
+                                    ImageFormat.YUV_420_888,
+                                    BASIC_CAPTURE_PROCESS_MAX_IMAGES);
+
+                    mCaptureOutputConfig = captureOutputConfigBuilder.build();
+
+                    builder.addOutputConfig(mCaptureOutputConfig);
+                }
             }
 
             addSessionParameter(builder);
@@ -261,6 +280,19 @@ public abstract class BaseAdvancedExtenderImpl implements AdvancedExtenderImpl {
                     builder.setParameters(key, value);
                 }
             }
+        }
+
+        protected boolean isJpegR(OutputSurfaceImpl surfaceConfig) {
+            // The surface configuration format for JPEG_R can be specified in either format.
+            // Camera2 uses HAL_PIXEL_FORMAT_BLOB and CameraX uses ImageFormat.JPEG_R.
+            return ((surfaceConfig.getImageFormat() == JpegEncoder.HAL_PIXEL_FORMAT_BLOB) &&
+                    (surfaceConfig.getDataspace() == DataSpace.DATASPACE_JPEG_R)) ||
+                    (surfaceConfig.getImageFormat() == ImageFormat.JPEG_R);
+        }
+
+        protected boolean isJpeg(OutputSurfaceImpl surfaceConfig) {
+            return (JpegEncoder.imageFormatToPublic(surfaceConfig.getImageFormat()) ==
+                    ImageFormat.JPEG) || (surfaceConfig.getImageFormat() == ImageFormat.JPEG);
         }
 
         protected void addTriggerRequestKeys(RequestBuilder builder,
@@ -340,16 +372,21 @@ public abstract class BaseAdvancedExtenderImpl implements AdvancedExtenderImpl {
 
             if (mCaptureOutputSurfaceConfig.getSurface() != null) {
                 synchronized (mLockCaptureSurfaceImageWriter) {
-                    if (JpegEncoder.imageFormatToPublic(mCaptureOutputSurfaceConfig
-                            .getImageFormat()) == ImageFormat.JPEG) {
+                    if (isJpegR(mCaptureOutputSurfaceConfig)) {
+                        return;
+                    }
+
+                    if (isJpeg(mCaptureOutputSurfaceConfig)) {
                         mCaptureSurfaceImageWriter = new ImageWriter
                                 .Builder(mCaptureOutputSurfaceConfig.getSurface())
                                 .setImageFormat(ImageFormat.JPEG)
                                 .setMaxImages(MAX_NUM_IMAGES)
                                 // For JPEG format, width x height should be set to (w*h) x 1
                                 // since the JPEG image is returned as a 1D byte array
-                                .setWidthAndHeight(mCaptureOutputSurfaceConfig.getSize().getWidth()
-                                        * mCaptureOutputSurfaceConfig.getSize().getHeight(), 1)
+                                .setWidthAndHeight(
+                                        mCaptureOutputSurfaceConfig.getSize().getWidth()
+                                        * mCaptureOutputSurfaceConfig.getSize().getHeight(),
+                                        1)
                                 .build();
                     } else {
                         mCaptureSurfaceImageWriter = new ImageWriter
@@ -490,9 +527,13 @@ public abstract class BaseAdvancedExtenderImpl implements AdvancedExtenderImpl {
 
                     addCaptureResultKeys(seqId, totalCaptureResult, captureCallback);
 
-                    mImageCaptureCaptureResultImageMatcher.setCameraCaptureCallback(
-                            totalCaptureResult,
-                            requestProcessorRequest.getCaptureStageId());
+                    if (!mProcessCapture) {
+                        captureCallback.onCaptureProcessStarted(seqId);
+                    } else {
+                        mImageCaptureCaptureResultImageMatcher.setCameraCaptureCallback(
+                                totalCaptureResult,
+                                requestProcessorRequest.getCaptureStageId());
+                    }
                 }
 
                 @Override
@@ -523,7 +564,7 @@ public abstract class BaseAdvancedExtenderImpl implements AdvancedExtenderImpl {
 
             mRequestProcessor.submit(requestList, callback);
 
-            if (mCaptureOutputSurfaceConfig.getSurface() != null) {
+            if (mCaptureOutputSurfaceConfig.getSurface() != null && mProcessCapture) {
                 mRequestProcessor.setImageProcessor(mCaptureOutputConfig.getId(),
                         new ImageProcessorImpl() {
                                 @Override
