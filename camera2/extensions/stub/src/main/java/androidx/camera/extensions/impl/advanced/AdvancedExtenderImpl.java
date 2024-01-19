@@ -20,6 +20,7 @@ import android.annotation.SuppressLint;
 import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CaptureRequest;
 import android.hardware.camera2.CaptureResult;
+import android.util.Pair;
 import android.util.Range;
 import android.util.Size;
 
@@ -216,4 +217,20 @@ public interface AdvancedExtenderImpl {
      * @since 1.4
      */
     boolean isPostviewAvailable();
+
+    /**
+     * Returns a list of {@link CameraCharacteristics} key/value pairs for apps to use when
+     * querying the Extensions specific {@link CameraCharacteristics}.
+     *
+     * <p>To ensure the correct {@link CameraCharacteristics} are used when an extension is
+     * enabled, an application should prioritize the value returned from the list if the
+     * {@link CameraCharacteristics} key is present. If the key doesn't exist in the returned list,
+     * then the application should query the value using
+     * {@link CameraCharacteristics#get(CameraCharacteristics.Key)}.
+     *
+     * <p>For example, an extension may limit the zoom ratio range. In this case, an OEM can return
+     * a new zoom ratio range for the key {@link CameraCharacteristics#CONTROL_ZOOM_RATIO_RANGE}.
+     * @since 1.5
+     */
+    List<Pair<CameraCharacteristics.Key, Object>> getAvailableCharacteristicsKeyValues();
 }
