@@ -106,7 +106,7 @@ public class EyesFreeVidSessionProcessor extends SessionProcessor {
             List<CameraOutputSurface> captureList = new ArrayList<>(List.of(imageCaptureSurface));
 
             ExtensionOutputConfiguration captureConfig = new ExtensionOutputConfiguration(
-                    captureList, CAPTURE_OUTPUT_ID, null, 0);
+                    captureList, CAPTURE_OUTPUT_ID, null, -1);
             outputs.add(captureConfig);
         }
 
@@ -122,7 +122,7 @@ public class EyesFreeVidSessionProcessor extends SessionProcessor {
                     previewSurface.getSize())));
 
             ExtensionOutputConfiguration previewConfig = new ExtensionOutputConfiguration(
-                    previewList, PREVIEW_OUTPUT_ID, null, 0);
+                    previewList, PREVIEW_OUTPUT_ID, null, -1);
             outputs.add(previewConfig);
         }
 
