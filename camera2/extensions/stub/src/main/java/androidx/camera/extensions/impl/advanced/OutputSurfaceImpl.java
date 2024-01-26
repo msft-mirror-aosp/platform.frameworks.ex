@@ -44,4 +44,9 @@ public interface OutputSurfaceImpl {
      * Gets the dataspace.
      */
     int getDataspace();
+
+    /**
+    * Gets the surface usage bits.
+    */
+    long getUsage();
 }
