@@ -25,8 +25,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import android.annotation.FlaggedApi;
 import android.annotation.NonNull;
-import android.annotation.Nullable;
 import android.camera.extensions.impl.service.EyesFreeVidService.AdvancedExtenderEyesFreeImpl;
+import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraDevice;
 import android.hardware.camera2.CaptureFailure;
 import android.hardware.camera2.CaptureRequest;
@@ -186,7 +186,7 @@ public class EyesFreeVidSessionProcessor extends SessionProcessor {
 
     @FlaggedApi(Flags.FLAG_CONCERT_MODE)
     @Override
-    public int startRepeating(@Nullable Executor executor,
+    public int startRepeating(@NonNull Executor executor,
             @NonNull CaptureCallback captureCallback) {
         List<Integer> outputConfigIds = new ArrayList<>(List.of(PREVIEW_OUTPUT_ID));
 
@@ -240,7 +240,11 @@ public class EyesFreeVidSessionProcessor extends SessionProcessor {
             }
         };
 
-        mRequestProcessor.setRepeating(requestRes, executor, resCallback);
+        try {
+            mRequestProcessor.setRepeating(requestRes, executor, resCallback);
+        } catch(CameraAccessException e) {
+            return -1;
+        }
 
         return seqId;
     }
@@ -278,7 +282,7 @@ public class EyesFreeVidSessionProcessor extends SessionProcessor {
 
     @FlaggedApi(Flags.FLAG_CONCERT_MODE)
     @Override
-    public int startCapture(@Nullable Executor executor,
+    public int startMultiFrameCapture(@NonNull Executor executor,
             @NonNull CaptureCallback captureCallback) {
         List<Integer> outputConfigIds = new ArrayList<>(List.of(CAPTURE_OUTPUT_ID));
 
@@ -333,7 +337,11 @@ public class EyesFreeVidSessionProcessor extends SessionProcessor {
             }
         };
 
-        mRequestProcessor.submit(requestRes, executor, resCallback);
+        try {
+            mRequestProcessor.submit(requestRes, executor, resCallback);
+        } catch(CameraAccessException e) {
+            return -1;
+        }
 
         captureCallback.onCaptureProcessStarted(seqId);
         return seqId;
@@ -342,7 +350,7 @@ public class EyesFreeVidSessionProcessor extends SessionProcessor {
     @FlaggedApi(Flags.FLAG_CONCERT_MODE)
     @Override
     public int startTrigger(@NonNull CaptureRequest captureRequest,
-            @Nullable Executor executor, @NonNull CaptureCallback captureCallback) {
+            @NonNull Executor executor, @NonNull CaptureCallback captureCallback) {
         List<Integer> outputConfigIds = new ArrayList<>(List.of(PREVIEW_OUTPUT_ID));
 
         RequestProcessor.Request requestRes = new RequestProcessor.Request(outputConfigIds,
@@ -393,7 +401,11 @@ public class EyesFreeVidSessionProcessor extends SessionProcessor {
             }
         };
 
-        mRequestProcessor.submit(requestRes, executor, resCallback);
+        try {
+            mRequestProcessor.submit(requestRes, executor, resCallback);
+        } catch(CameraAccessException e) {
+            return -1;
+        }
 
         captureCallback.onCaptureProcessStarted(seqId);
         return seqId;
