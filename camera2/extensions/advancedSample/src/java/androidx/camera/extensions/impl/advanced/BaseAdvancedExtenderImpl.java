@@ -216,7 +216,8 @@ public abstract class BaseAdvancedExtenderImpl implements AdvancedExtenderImpl {
                             Camera2OutputConfigImplBuilder.newImageReaderConfig(
                                     mCaptureOutputSurfaceConfig.getSize(),
                                     ImageFormat.YUV_420_888,
-                                    BASIC_CAPTURE_PROCESS_MAX_IMAGES);
+                                    BASIC_CAPTURE_PROCESS_MAX_IMAGES,
+                                    mCaptureOutputSurfaceConfig.getUsage());
 
                     mCaptureOutputConfig = captureOutputConfigBuilder.build();
 
