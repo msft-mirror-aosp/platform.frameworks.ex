@@ -26,6 +26,7 @@ import android.content.Context;
 import android.graphics.ImageFormat;
 import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CameraDevice;
+import android.hardware.camera2.CameraMetadata;
 import android.hardware.camera2.CaptureFailure;
 import android.hardware.camera2.CaptureRequest;
 import android.hardware.camera2.CaptureResult;
@@ -737,5 +738,22 @@ public abstract class BaseAdvancedExtenderImpl implements AdvancedExtenderImpl {
     @Override
     public boolean isPostviewAvailable() {
         return false;
+    }
+
+    @Override
+    public List<Pair<CameraCharacteristics.Key, Object>> getAvailableCharacteristicsKeyValues() {
+        Range<Float> zoomRange = mCameraCharacteristics
+                    .get(CameraCharacteristics.CONTROL_ZOOM_RATIO_RANGE);
+        float zoomRangeLower = Math.max(1f, zoomRange.getLower());
+        float zoomRangeUpper = Math.min(10f, zoomRange.getUpper());
+        return Arrays.asList(
+                Pair.create(CameraCharacteristics.CONTROL_ZOOM_RATIO_RANGE,
+                        Range.create(zoomRangeLower, zoomRangeUpper)),
+                Pair.create(CameraCharacteristics.CONTROL_AF_AVAILABLE_MODES,
+                        new int[]{
+                                CameraMetadata.CONTROL_AF_MODE_OFF,
+                                CameraMetadata.CONTROL_AF_MODE_AUTO
+                        })
+        );
     }
 }
