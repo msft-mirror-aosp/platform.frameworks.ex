@@ -16,7 +16,6 @@
 
 package android.camera.extensions.impl.service;
 
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -241,7 +240,7 @@ public class EyesFreeVidSessionProcessor extends SessionProcessor {
             public void onCaptureFailed(RequestProcessor.Request request,
                     CaptureFailure captureFailure) {
                 if (!mOnCaptureSessionEndStarted.get()) {
-                    captureCallback.onCaptureFailed(seqId);
+                    captureCallback.onCaptureFailed(seqId, captureFailure.getReason());
                 }
             }
 
@@ -249,7 +248,7 @@ public class EyesFreeVidSessionProcessor extends SessionProcessor {
             public void onCaptureBufferLost(RequestProcessor.Request request,
                     long frameNumber, int outputStreamId) {
                 if (!mOnCaptureSessionEndStarted.get()) {
-                    captureCallback.onCaptureFailed(seqId);
+                    captureCallback.onCaptureFailed(seqId, CaptureFailure.REASON_ERROR);
                 }
             }
 
@@ -422,13 +421,13 @@ public class EyesFreeVidSessionProcessor extends SessionProcessor {
             @Override
             public void onCaptureFailed(RequestProcessor.Request request,
                     CaptureFailure captureFailure) {
-                captureCallback.onCaptureFailed(seqId);
+                captureCallback.onCaptureFailed(seqId, captureFailure.getReason());
             }
 
             @Override
             public void onCaptureBufferLost(RequestProcessor.Request request,
                     long frameNumber, int outputStreamId) {
-                captureCallback.onCaptureFailed(seqId);
+                captureCallback.onCaptureFailed(seqId, CaptureFailure.REASON_ERROR);
             }
 
             @Override
@@ -486,13 +485,13 @@ public class EyesFreeVidSessionProcessor extends SessionProcessor {
             @Override
             public void onCaptureFailed(RequestProcessor.Request request,
                     CaptureFailure captureFailure) {
-                captureCallback.onCaptureFailed(seqId);
+                captureCallback.onCaptureFailed(seqId, captureFailure.getReason());
             }
 
             @Override
             public void onCaptureBufferLost(RequestProcessor.Request request,
                     long frameNumber, int outputStreamId) {
-                captureCallback.onCaptureFailed(seqId);
+                captureCallback.onCaptureFailed(seqId, CaptureFailure.REASON_ERROR);
             }
 
             @Override
