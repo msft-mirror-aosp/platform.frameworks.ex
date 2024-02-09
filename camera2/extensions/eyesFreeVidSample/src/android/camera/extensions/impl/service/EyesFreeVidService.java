@@ -102,7 +102,7 @@ public class EyesFreeVidService extends CameraExtensionService {
 
         @FlaggedApi(Flags.FLAG_CONCERT_MODE)
         @Override
-        public void init(String cameraId, CharacteristicsMap map) {
+        public void initialize(String cameraId, CharacteristicsMap map) {
             mCameraCharacteristics = map.get(cameraId);
         }
 
