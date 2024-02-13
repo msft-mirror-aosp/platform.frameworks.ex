@@ -220,16 +220,19 @@ public interface AdvancedExtenderImpl {
 
     /**
      * Returns a list of {@link CameraCharacteristics} key/value pairs for apps to use when
-     * querying the Extensions specific {@link CameraCharacteristics}.
+     * querying {@link CameraExtensionCharacteristics#get} and
+     * {@link CameraExtensionCharacteristics#getKeys}. The key/value pairs define the limitations
+     * on the controls returned from {@link #getAvailableCaptureRequestKeys}. If a key is not
+     * present in the returned list, then the capability is either undefined or unsupported.
      *
-     * <p>To ensure the correct {@link CameraCharacteristics} are used when an extension is
-     * enabled, an application should prioritize the value returned from the list if the
-     * {@link CameraCharacteristics} key is present. If the key doesn't exist in the returned list,
-     * then the application should query the value using
-     * {@link CameraCharacteristics#get(CameraCharacteristics.Key)}.
-     *
-     * <p>For example, an extension may limit the zoom ratio range. In this case, an OEM can return
+     * <p>For example, an extension may limit the zoom ratio range. In this case, an OEM returns
      * a new zoom ratio range for the key {@link CameraCharacteristics#CONTROL_ZOOM_RATIO_RANGE}.
+     *
+     * <p>Similarly, an extension may support preview stabilization. In this case, the OEM returns
+     * the array containing the elements
+     * {@link CameraCharacteristics#CONTROL_VIDEO_STABILIZATION_MODE_PREVIEW_STABILIZATION} and
+     * {@link CameraCharacteristics#CONTROL_VIDEO_STABILIZATION_MODE_OFF} for the key
+     * {@link CameraCharacteristics#CONTROL_AVAILABLE_VIDEO_STABILIZATION_MODES}.
      * @since 1.5
      */
     List<Pair<CameraCharacteristics.Key, Object>> getAvailableCharacteristicsKeyValues();
