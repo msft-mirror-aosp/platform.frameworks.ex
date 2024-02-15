@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 The Android Open Source Project
+ * Copyright 2024 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,21 +28,21 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Stub advanced extender implementation for auto.
+ * Stub advanced extender implementation for eyes free videography.
  *
  * <p>This class should be implemented by OEM and deployed to the target devices.
  *
- * @since 1.2
+ * @since 1.5
  */
 @SuppressLint("UnknownNullness")
-public class AutoAdvancedExtenderImpl implements AdvancedExtenderImpl {
-    public AutoAdvancedExtenderImpl() {
+public class EyesFreeVideographyAdvancedExtenderImpl implements AdvancedExtenderImpl {
+    public EyesFreeVideographyAdvancedExtenderImpl() {
     }
 
     @Override
     public boolean isExtensionAvailable(String cameraId,
             Map<String, CameraCharacteristics> characteristicsMap) {
-        throw new RuntimeException("Stub, replace with implementation.");
+        return false;
     }
 
     @Override
@@ -62,6 +62,7 @@ public class AutoAdvancedExtenderImpl implements AdvancedExtenderImpl {
             String cameraId) {
         throw new RuntimeException("Stub, replace with implementation.");
     }
+
 
     @Override
     public Map<Integer, List<Size>> getSupportedCaptureOutputResolutions(
@@ -107,7 +108,8 @@ public class AutoAdvancedExtenderImpl implements AdvancedExtenderImpl {
     }
 
     @Override
-    public List<Pair<CameraCharacteristics.Key, Object>> getAvailableCharacteristicsKeyValues() {
+    public List<Pair<CameraCharacteristics.Key, Object>>
+            getAvailableCharacteristicsKeyValues() {
         throw new RuntimeException("Stub, replace with implementation.");
     }
 }
