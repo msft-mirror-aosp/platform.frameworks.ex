@@ -25,8 +25,10 @@ import java.util.Map;
 import java.util.Set;
 
 import android.annotation.FlaggedApi;
+import android.graphics.ColorSpace;
 import android.graphics.ImageFormat;
 import android.hardware.camera2.CameraCharacteristics;
+import android.hardware.camera2.CameraCharacteristics.Key;
 import android.hardware.camera2.CameraExtensionCharacteristics;
 import android.hardware.camera2.CameraManager;
 import android.hardware.camera2.CameraMetadata;
@@ -38,6 +40,8 @@ import android.hardware.camera2.extension.AdvancedExtender;
 import android.hardware.camera2.extension.CameraExtensionService;
 import android.hardware.camera2.extension.CharacteristicsMap;
 import android.hardware.camera2.extension.SessionProcessor;
+import android.hardware.camera2.params.ColorSpaceProfiles;
+import android.hardware.camera2.params.DynamicRangeProfiles;
 import android.hardware.camera2.params.StreamConfiguration;
 import android.hardware.camera2.params.StreamConfigurationDuration;
 import android.hardware.camera2.params.StreamConfigurationMap;
@@ -59,6 +63,11 @@ public class EyesFreeVidService extends CameraExtensionService {
     @GuardedBy("mLock")
     private final Set<IBinder> mAttachedClients = new HashSet<>();
     CameraManager mCameraManager;
+
+    protected static final Key REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES_MAP =
+            new Key<long[]>("android.request.availableDynamicRangeProfilesMap", long[].class);
+    protected static final Key REQUEST_AVAILABLE_COLOR_SPACE_PROFILES_MAP =
+            new Key<long[]>("android.request.availableColorSpaceProfilesMap", long[].class);
 
     @FlaggedApi(Flags.FLAG_CONCERT_MODE)
     @Override
@@ -149,7 +158,7 @@ public class EyesFreeVidService extends CameraExtensionService {
         public Map<Integer, List<Size>> getSupportedCaptureOutputResolutions(
                 String cameraId) {
             return filterOutputResolutions(Arrays.asList(ImageFormat.YUV_420_888,
-                    ImageFormat.JPEG));
+                    ImageFormat.JPEG, ImageFormat.JPEG_R, ImageFormat.YCBCR_P010));
         }
 
         @FlaggedApi(Flags.FLAG_CONCERT_MODE)
@@ -272,6 +281,15 @@ public class EyesFreeVidService extends CameraExtensionService {
                     new StreamConfigurationDuration[tmpStallDurations.size()];
             filteredStallDurations = tmpStallDurations.toArray(filteredStallDurations);
 
+            long[] dynamicRangeProfileArray = new long[]{
+                    DynamicRangeProfiles.HLG10,
+                    DynamicRangeProfiles.HLG10 | DynamicRangeProfiles.STANDARD,
+                    0L};
+            long[] colorSpacesProfileArray = new long[]{
+                    ColorSpace.Named.BT2020_HLG.ordinal(),
+                    ImageFormat.YCBCR_P010,
+                    DynamicRangeProfiles.HLG10};
+
             return Arrays.asList(
                     Pair.create(CameraCharacteristics.SCALER_AVAILABLE_STREAM_CONFIGURATIONS,
                             filteredConfigurations),
@@ -293,7 +311,11 @@ public class EyesFreeVidService extends CameraExtensionService {
                                     .CONTROL_VIDEO_STABILIZATION_MODE_PREVIEW_STABILIZATION
                             }),
                     Pair.create(CameraExtensionCharacteristics.EFV_PADDING_ZOOM_FACTOR_RANGE,
-                            new Range<Float>(1.0f, 2.0f))
+                            new Range<Float>(1.0f, 2.0f)),
+                    Pair.create(REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES_MAP,
+                            dynamicRangeProfileArray),
+                    Pair.create(REQUEST_AVAILABLE_COLOR_SPACE_PROFILES_MAP,
+                            colorSpacesProfileArray)
             );
         }
     }
