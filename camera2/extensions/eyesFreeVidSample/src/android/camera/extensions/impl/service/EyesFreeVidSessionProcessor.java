@@ -282,18 +282,15 @@ public class EyesFreeVidSessionProcessor extends SessionProcessor {
         @NonNull CaptureCallback captureCallback,
         @NonNull RequestProcessor.Request request) {
 
-        CameraMetadataNative cameraMetadataNative = new CameraMetadataNative();
-        long vendorId = mAdvancedExtender.getMetadataVendorId(mCameraId);
-        cameraMetadataNative.setVendorId(vendorId);
-
         Long shutterTimestamp = result.get(CaptureResult.SENSOR_TIMESTAMP);
         if (shutterTimestamp != null) {
 
             List<CaptureResult.Key> captureResultKeys =
                     mAdvancedExtender.getAvailableCaptureResultKeys(mCameraId);
+            HashMap<CaptureResult.Key, Object> captureResults = new HashMap<>();
             for (CaptureResult.Key key : captureResultKeys) {
                 if (result.get(key) != null) {
-                    cameraMetadataNative.set(key, result.get(key));
+                    captureResults.put(key, result.get(key));
                 }
             }
 
@@ -303,27 +300,27 @@ public class EyesFreeVidSessionProcessor extends SessionProcessor {
                 boolean stabilizationModeLocked = false;
                 for (Pair<CaptureRequest.Key, Object> parameter : requestParameters) {
                     if (ExtensionCaptureRequest.EFV_AUTO_ZOOM.equals(parameter.first)) {
-                        cameraMetadataNative.set(ExtensionCaptureResult.EFV_AUTO_ZOOM,
+                        captureResults.put(ExtensionCaptureResult.EFV_AUTO_ZOOM,
                                 (boolean) parameter.second);
                         autoZoomEnabled = (boolean) parameter.second;
                         if (autoZoomEnabled &&
                                 ExtensionCaptureRequest.EFV_MAX_PADDING_ZOOM_FACTOR.equals(
                                 parameter.first)) {
-                            cameraMetadataNative.set(
+                            captureResults.put(
                                     ExtensionCaptureResult.EFV_MAX_PADDING_ZOOM_FACTOR,
                                     (Float) parameter.second);
                         }
                     }
                     if (ExtensionCaptureRequest.EFV_PADDING_ZOOM_FACTOR.equals(parameter.first)) {
-                        cameraMetadataNative.set(ExtensionCaptureResult.EFV_PADDING_ZOOM_FACTOR,
+                        captureResults.put(ExtensionCaptureResult.EFV_PADDING_ZOOM_FACTOR,
                                 (Float) parameter.second);
                     }
                     if (ExtensionCaptureRequest.EFV_TRANSLATE_VIEWPORT.equals(parameter.first)) {
-                        cameraMetadataNative.set(ExtensionCaptureResult.EFV_TRANSLATE_VIEWPORT,
+                        captureResults.put(ExtensionCaptureResult.EFV_TRANSLATE_VIEWPORT,
                                 (Pair<Integer, Integer>) parameter.second);
                     }
                     if (ExtensionCaptureRequest.EFV_ROTATE_VIEWPORT.equals(parameter.first)) {
-                        cameraMetadataNative.set(ExtensionCaptureResult.EFV_ROTATE_VIEWPORT,
+                        captureResults.put(ExtensionCaptureResult.EFV_ROTATE_VIEWPORT,
                                 (Float) parameter.second);
                     }
                     if (ExtensionCaptureRequest.EFV_STABILIZATION_MODE.equals(parameter.first)) {
@@ -331,7 +328,7 @@ public class EyesFreeVidSessionProcessor extends SessionProcessor {
                                 (int) parameter.second) {
                             stabilizationModeLocked = true;
                             int[] samplePaddingRegion = {5, 5, 5, 5};
-                            cameraMetadataNative.set(ExtensionCaptureResult.EFV_PADDING_REGION,
+                            captureResults.put(ExtensionCaptureResult.EFV_PADDING_REGION,
                                     samplePaddingRegion);
                             CameraCharacteristics cameraCharacteristics =
                                     mAdvancedExtender.getCameraCharacteristics();
@@ -346,7 +343,7 @@ public class EyesFreeVidSessionProcessor extends SessionProcessor {
                                     new PointF(centerX + squareSize, centerY + squareSize),
                                     new PointF(centerX - squareSize, centerY + squareSize)
                             };
-                            cameraMetadataNative.set(ExtensionCaptureResult.EFV_TARGET_COORDINATES,
+                            captureResults.put(ExtensionCaptureResult.EFV_TARGET_COORDINATES,
                                     sampleTargetCoordinates);
                         }
                     }
@@ -354,14 +351,12 @@ public class EyesFreeVidSessionProcessor extends SessionProcessor {
 
                 if (autoZoomEnabled && stabilizationModeLocked) {
                     int[] sampleAutoZoomPaddingRegion = {3, 3, 3, 3};
-                    cameraMetadataNative.set(ExtensionCaptureResult.EFV_AUTO_ZOOM_PADDING_REGION,
+                    captureResults.put(ExtensionCaptureResult.EFV_AUTO_ZOOM_PADDING_REGION,
                             sampleAutoZoomPaddingRegion);
                 }
             }
 
-            CaptureResult captureResult = new CaptureResult(cameraMetadataNative, seqId);
-            captureCallback.onCaptureCompleted(shutterTimestamp, seqId,
-                    captureResult);
+            captureCallback.onCaptureCompleted(shutterTimestamp, seqId, captureResults);
         }
     }
 
