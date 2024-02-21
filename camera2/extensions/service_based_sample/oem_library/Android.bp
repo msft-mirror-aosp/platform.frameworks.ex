@@ -34,7 +34,6 @@ java_library {
         ]
     },
     system_ext_specific: true,
-    platform_apis: true,
 }
 
 prebuilt_etc {
