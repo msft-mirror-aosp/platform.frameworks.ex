@@ -22,5 +22,6 @@ android_app {
     static_libs: [
         "androidx.annotation_annotation"
     ],
-    platform_apis: true
+    platform_apis: true,
+    system_ext_specific: true
 }
