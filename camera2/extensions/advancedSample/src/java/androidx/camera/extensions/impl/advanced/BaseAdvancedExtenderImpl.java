@@ -343,13 +343,13 @@ public abstract class BaseAdvancedExtenderImpl implements AdvancedExtenderImpl {
                 @Override
                 public void onCaptureFailed(RequestProcessorImpl.Request request,
                         CaptureFailure captureFailure) {
-                    captureCallback.onCaptureFailed(seqId);
+                    captureCallback.onCaptureFailed(seqId, captureFailure.getReason());
                 }
 
                 @Override
                 public void onCaptureBufferLost(RequestProcessorImpl.Request request,
                         long frameNumber, int outputStreamId) {
-                    captureCallback.onCaptureFailed(seqId);
+                    captureCallback.onCaptureFailed(seqId, CaptureFailure.REASON_ERROR);
                 }
 
                 @Override
@@ -441,13 +441,13 @@ public abstract class BaseAdvancedExtenderImpl implements AdvancedExtenderImpl {
                 @Override
                 public void onCaptureFailed(RequestProcessorImpl.Request request,
                         CaptureFailure captureFailure) {
-                    captureCallback.onCaptureFailed(seqId);
+                    captureCallback.onCaptureFailed(seqId, captureFailure.getReason());
                 }
 
                 @Override
                 public void onCaptureBufferLost(RequestProcessorImpl.Request request,
                         long frameNumber, int outputStreamId) {
-                    captureCallback.onCaptureFailed(seqId);
+                    captureCallback.onCaptureFailed(seqId, CaptureFailure.REASON_ERROR);
                 }
 
                 @Override
@@ -541,13 +541,13 @@ public abstract class BaseAdvancedExtenderImpl implements AdvancedExtenderImpl {
                 @Override
                 public void onCaptureFailed(RequestProcessorImpl.Request request,
                         CaptureFailure captureFailure) {
-                    captureCallback.onCaptureFailed(seqId);
+                    captureCallback.onCaptureFailed(seqId, captureFailure.getReason());
                 }
 
                 @Override
                 public void onCaptureBufferLost(RequestProcessorImpl.Request request,
                         long frameNumber, int outputStreamId) {
-                    captureCallback.onCaptureFailed(seqId);
+                    captureCallback.onCaptureFailed(seqId, CaptureFailure.REASON_ERROR);
                 }
 
                 @Override
