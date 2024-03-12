@@ -23,14 +23,18 @@ import static androidx.camera.extensions.impl.advanced.JpegEncoder.JPEG_DEFAULT_
 
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.graphics.ColorSpace;
 import android.graphics.ImageFormat;
 import android.hardware.camera2.CameraCharacteristics;
+import android.hardware.camera2.CameraCharacteristics.Key;
 import android.hardware.camera2.CameraDevice;
 import android.hardware.camera2.CameraMetadata;
 import android.hardware.camera2.CaptureFailure;
 import android.hardware.camera2.CaptureRequest;
 import android.hardware.camera2.CaptureResult;
 import android.hardware.camera2.TotalCaptureResult;
+import android.hardware.camera2.params.ColorSpaceProfiles;
+import android.hardware.camera2.params.DynamicRangeProfiles;
 import android.hardware.camera2.params.StreamConfigurationMap;
 import android.hardware.DataSpace;
 import android.media.Image;
@@ -57,6 +61,7 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @SuppressLint("UnknownNullness")
 public abstract class BaseAdvancedExtenderImpl implements AdvancedExtenderImpl {
@@ -70,6 +75,11 @@ public abstract class BaseAdvancedExtenderImpl implements AdvancedExtenderImpl {
     }
 
     protected CameraCharacteristics mCameraCharacteristics;
+
+    protected static final Key REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES_MAP =
+            new Key<long[]>("android.request.availableDynamicRangeProfilesMap", long[].class);
+    protected static final Key REQUEST_AVAILABLE_COLOR_SPACE_PROFILES_MAP =
+            new Key<long[]>("android.request.availableColorSpaceProfilesMap", long[].class);
 
     public BaseAdvancedExtenderImpl() {
     }
@@ -115,7 +125,7 @@ public abstract class BaseAdvancedExtenderImpl implements AdvancedExtenderImpl {
     @Override
     public Map<Integer, List<Size>> getSupportedCaptureOutputResolutions(String cameraId) {
         return filterOutputResolutions(Arrays.asList(ImageFormat.JPEG, ImageFormat.YUV_420_888,
-                ImageFormat.JPEG_R));
+                ImageFormat.JPEG_R, ImageFormat.YCBCR_P010));
     }
 
     @Override
@@ -190,6 +200,9 @@ public abstract class BaseAdvancedExtenderImpl implements AdvancedExtenderImpl {
                         Camera2OutputConfigImplBuilder.newSurfaceConfig(
                             mPreviewOutputSurfaceConfig.getSurface());
 
+                previewOutputConfigBuilder.setDynamicRangeProfile(
+                        mPreviewOutputSurfaceConfig.getDynamicRangeProfile());
+
                 mPreviewOutputConfig = previewOutputConfigBuilder.build();
 
                 builder.addOutputConfig(mPreviewOutputConfig);
@@ -198,13 +211,27 @@ public abstract class BaseAdvancedExtenderImpl implements AdvancedExtenderImpl {
             // Image Capture
             if (mCaptureOutputSurfaceConfig.getSurface() != null) {
 
-                // For this sample, JPEG_R will not be processed
+                // For this sample, JPEG_R or YCBCR_P010 will not be processed
                 if (isJpegR(mCaptureOutputSurfaceConfig)) {
                     Camera2OutputConfigImplBuilder captureOutputConfigBuilder;
 
                     captureOutputConfigBuilder =
                             Camera2OutputConfigImplBuilder.newSurfaceConfig(
                                         mCaptureOutputSurfaceConfig.getSurface());
+
+                    mCaptureOutputConfig = captureOutputConfigBuilder.build();
+
+                    builder.addOutputConfig(mCaptureOutputConfig);
+                    mProcessCapture = false;
+                } else if (mCaptureOutputSurfaceConfig.getImageFormat() == ImageFormat.YCBCR_P010) {
+                    Camera2OutputConfigImplBuilder captureOutputConfigBuilder;
+
+                    captureOutputConfigBuilder =
+                            Camera2OutputConfigImplBuilder.newSurfaceConfig(
+                                        mCaptureOutputSurfaceConfig.getSurface());
+
+                    captureOutputConfigBuilder.setDynamicRangeProfile(
+                                mCaptureOutputSurfaceConfig.getDynamicRangeProfile());
 
                     mCaptureOutputConfig = captureOutputConfigBuilder.build();
 
@@ -226,6 +253,7 @@ public abstract class BaseAdvancedExtenderImpl implements AdvancedExtenderImpl {
                 }
             }
 
+            builder.setColorSpace(surfaceConfigs.getColorSpace());
             addSessionParameter(builder);
 
             return builder.build();
@@ -374,7 +402,7 @@ public abstract class BaseAdvancedExtenderImpl implements AdvancedExtenderImpl {
 
             if (mCaptureOutputSurfaceConfig.getSurface() != null) {
                 synchronized (mLockCaptureSurfaceImageWriter) {
-                    if (isJpegR(mCaptureOutputSurfaceConfig)) {
+                    if (!mProcessCapture) {
                         return;
                     }
 
@@ -742,18 +770,62 @@ public abstract class BaseAdvancedExtenderImpl implements AdvancedExtenderImpl {
 
     @Override
     public List<Pair<CameraCharacteristics.Key, Object>> getAvailableCharacteristicsKeyValues() {
+        int[] caps = mCameraCharacteristics
+                .get(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES);
+
+        Set<Integer> unsupportedCapabilities = new HashSet<>(Arrays.asList(
+                CameraMetadata.REQUEST_AVAILABLE_CAPABILITIES_DEPTH_OUTPUT,
+                CameraMetadata.REQUEST_AVAILABLE_CAPABILITIES_RAW,
+                CameraMetadata.REQUEST_AVAILABLE_CAPABILITIES_PRIVATE_REPROCESSING,
+                CameraMetadata.REQUEST_AVAILABLE_CAPABILITIES_YUV_REPROCESSING,
+                CameraMetadata.REQUEST_AVAILABLE_CAPABILITIES_CONSTRAINED_HIGH_SPEED_VIDEO,
+                CameraMetadata.REQUEST_AVAILABLE_CAPABILITIES_OFFLINE_PROCESSING,
+                CameraMetadata.REQUEST_AVAILABLE_CAPABILITIES_REMOSAIC_REPROCESSING,
+                CameraMetadata.REQUEST_AVAILABLE_CAPABILITIES_MONOCHROME,
+                CameraMetadata.REQUEST_AVAILABLE_CAPABILITIES_SECURE_IMAGE_DATA,
+                CameraMetadata.REQUEST_AVAILABLE_CAPABILITIES_SYSTEM_CAMERA,
+                CameraMetadata.REQUEST_AVAILABLE_CAPABILITIES_ULTRA_HIGH_RESOLUTION_SENSOR
+        ));
+
+        List<Integer> filtered = new ArrayList<>();
+        for (int c : caps) {
+            if (unsupportedCapabilities.contains(c)) {
+                continue;
+            }
+            filtered.add(c);
+        }
+        int[] extensionsCaps = new int[filtered.size()];
+        for (int i = 0; i < filtered.size(); i++) {
+                extensionsCaps[i] = filtered.get(i);
+        }
+
+        long[] dynamicRangeProfileArray = new long[]{
+                DynamicRangeProfiles.HLG10,
+                DynamicRangeProfiles.HLG10 | DynamicRangeProfiles.STANDARD,
+                0L};
+        long[] colorSpacesProfileArray = new long[]{
+                ColorSpace.Named.BT2020_HLG.ordinal(),
+                ImageFormat.YCBCR_P010,
+                DynamicRangeProfiles.HLG10};
+
         Range<Float> zoomRange = mCameraCharacteristics
                     .get(CameraCharacteristics.CONTROL_ZOOM_RATIO_RANGE);
         float zoomRangeLower = Math.max(1f, zoomRange.getLower());
         float zoomRangeUpper = Math.min(10f, zoomRange.getUpper());
         return Arrays.asList(
+                Pair.create(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES,
+                        extensionsCaps),
                 Pair.create(CameraCharacteristics.CONTROL_ZOOM_RATIO_RANGE,
                         Range.create(zoomRangeLower, zoomRangeUpper)),
                 Pair.create(CameraCharacteristics.CONTROL_AF_AVAILABLE_MODES,
                         new int[]{
                                 CameraMetadata.CONTROL_AF_MODE_OFF,
                                 CameraMetadata.CONTROL_AF_MODE_AUTO
-                        })
+                        }),
+                Pair.create(REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES_MAP,
+                        dynamicRangeProfileArray),
+                Pair.create(REQUEST_AVAILABLE_COLOR_SPACE_PROFILES_MAP,
+                        colorSpacesProfileArray)
         );
     }
 }

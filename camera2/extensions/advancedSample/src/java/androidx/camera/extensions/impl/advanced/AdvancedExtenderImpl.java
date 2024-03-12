@@ -18,6 +18,7 @@ package androidx.camera.extensions.impl.advanced;
 
 import android.annotation.SuppressLint;
 import android.hardware.camera2.CameraCharacteristics;
+import android.hardware.camera2.CameraExtensionCharacteristics;
 import android.hardware.camera2.CaptureRequest;
 import android.hardware.camera2.CaptureResult;
 import android.util.Pair;
@@ -230,6 +231,13 @@ public interface AdvancedExtenderImpl {
      *
      * <p>For example, an extension may limit the zoom ratio range. In this case, an OEM can return
      * a new zoom ratio range for the key {@link CameraCharacteristics#CONTROL_ZOOM_RATIO_RANGE}.
+     *
+     * <p> Currently, the only synthetic keys supported for override are
+     * {@link CameraCharacteristics#REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES} and
+     * {@link CameraCharacteristics#REQUEST_AVAILABLE_COLOR_SPACE_PROFILES}. To enable them, an OEM
+     * should override the respective native keys
+     * {@link CameraCharacteristics#REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES_MAP} and
+     *  {@link CameraCharacteristics#REQUEST_AVAILABLE_COLOR_SPACE_PROFILES_MAP}.
      * @since 1.5
      */
     List<Pair<CameraCharacteristics.Key, Object>> getAvailableCharacteristicsKeyValues();

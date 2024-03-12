@@ -28,6 +28,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import android.annotation.FlaggedApi;
 import android.annotation.NonNull;
 import android.camera.extensions.impl.service.EyesFreeVidService.AdvancedExtenderEyesFreeImpl;
+import android.graphics.ImageFormat;
 import android.graphics.PointF;
 import android.graphics.Rect;
 import android.hardware.camera2.CameraAccessException;
@@ -126,9 +127,10 @@ public class EyesFreeVidSessionProcessor extends SessionProcessor {
                     previewSurface.getSize().getHeight(), previewSurface.getImageFormat(),
                     MAX_NUM_IMAGES, SurfaceUtils.getSurfaceUsage(previewSurface.getSurface()));
 
-            List<CameraOutputSurface> previewList = new ArrayList<>(List.of(
-                    new CameraOutputSurface(mPreviewImageReader.getSurface(),
-                    previewSurface.getSize())));
+            CameraOutputSurface previewOutputSurface = new CameraOutputSurface(
+                    mPreviewImageReader.getSurface(), previewSurface.getSize());
+            previewOutputSurface.setDynamicRangeProfile(previewSurface.getDynamicRangeProfile());
+            List<CameraOutputSurface> previewList = new ArrayList<>(List.of(previewOutputSurface));
 
             ExtensionOutputConfiguration previewConfig = new ExtensionOutputConfiguration(
                     previewList, PREVIEW_OUTPUT_ID, null, -1);
@@ -137,6 +139,11 @@ public class EyesFreeVidSessionProcessor extends SessionProcessor {
 
         ExtensionConfiguration res = new ExtensionConfiguration(0 /*session type*/,
                 CameraDevice.TEMPLATE_PREVIEW, outputs, null);
+
+        if (imageCaptureSurface != null
+                && imageCaptureSurface.getImageFormat() == ImageFormat.YCBCR_P010) {
+            res.setColorSpace(imageCaptureSurface.getColorSpace());
+        }
 
         return res;
     }
