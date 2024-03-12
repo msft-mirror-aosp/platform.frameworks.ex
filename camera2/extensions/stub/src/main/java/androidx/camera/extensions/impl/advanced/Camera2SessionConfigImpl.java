@@ -18,6 +18,7 @@ package androidx.camera.extensions.impl.advanced;
 
 import android.annotation.SuppressLint;
 import android.hardware.camera2.CaptureRequest;
+import android.hardware.camera2.params.ColorSpaceProfiles;
 
 import java.util.List;
 import java.util.Map;
@@ -55,4 +56,14 @@ public interface Camera2SessionConfigImpl {
      * will be configured to use the default regular type.
      */
     int getSessionType();
+
+    /**
+     * Gets the color space.
+     *
+     * @since 1.5
+     * @return {@link android.graphics#ColorSpace.Named} set for session configuration
+     */
+    default int getColorSpace() {
+        return ColorSpaceProfiles.UNSPECIFIED;
+    }
 }

@@ -233,6 +233,13 @@ public interface AdvancedExtenderImpl {
      * {@link CameraCharacteristics#CONTROL_VIDEO_STABILIZATION_MODE_PREVIEW_STABILIZATION} and
      * {@link CameraCharacteristics#CONTROL_VIDEO_STABILIZATION_MODE_OFF} for the key
      * {@link CameraCharacteristics#CONTROL_AVAILABLE_VIDEO_STABILIZATION_MODES}.
+     *
+     * <p> Currently, the only synthetic keys supported for override are
+     * {@link CameraCharacteristics#REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES} and
+     * {@link CameraCharacteristics#REQUEST_AVAILABLE_COLOR_SPACE_PROFILES}. To enable them, an OEM
+     * should override the respective native keys
+     * {@link CameraCharacteristics#REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES_MAP} and
+     *  {@link CameraCharacteristics#REQUEST_AVAILABLE_COLOR_SPACE_PROFILES_MAP}.
      * @since 1.5
      */
     List<Pair<CameraCharacteristics.Key, Object>> getAvailableCharacteristicsKeyValues();
