@@ -75,6 +75,7 @@ public abstract class BaseAdvancedExtenderImpl implements AdvancedExtenderImpl {
     }
 
     protected CameraCharacteristics mCameraCharacteristics;
+    protected String mCameraId;
 
     protected static final Key REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES_MAP =
             new Key<long[]>("android.request.availableDynamicRangeProfilesMap", long[].class);
@@ -92,6 +93,7 @@ public abstract class BaseAdvancedExtenderImpl implements AdvancedExtenderImpl {
     public void init(String cameraId,
             Map<String, CameraCharacteristics> characteristicsMap) {
         mCameraCharacteristics = characteristicsMap.get(cameraId);
+        mCameraId = cameraId;
     }
 
     @Override
@@ -130,7 +132,7 @@ public abstract class BaseAdvancedExtenderImpl implements AdvancedExtenderImpl {
 
     @Override
     public Map<Integer, List<Size>> getSupportedPostviewResolutions(Size captureSize) {
-        return new HashMap<>();
+        return new HashMap<Integer, List<Size>>();
     }
 
     @Override
@@ -148,21 +150,30 @@ public abstract class BaseAdvancedExtenderImpl implements AdvancedExtenderImpl {
 
         protected Camera2OutputConfigImpl mPreviewOutputConfig;
         protected Camera2OutputConfigImpl mCaptureOutputConfig;
+        protected Camera2OutputConfigImpl mPostviewOutputConfig;
 
         protected OutputSurfaceImpl mPreviewOutputSurfaceConfig;
         protected OutputSurfaceImpl mCaptureOutputSurfaceConfig;
+        protected OutputSurfaceImpl mPostviewOutputSurfaceConfig;
 
         protected final Object mLock = new Object();
         @GuardedBy("mLock")
         protected Map<CaptureRequest.Key<?>, Object> mParameters = new LinkedHashMap<>();
 
-        protected final Object mLockCaptureSurfaceImageWriter = new Object();
-        @GuardedBy("mLockCaptureSurfaceImageWriter")
+        protected final Object mLockImageWriter = new Object();
+        @GuardedBy("mLockImageWriter")
         protected ImageWriter mCaptureSurfaceImageWriter;
+
+        @GuardedBy("mLockImageWriter")
+        protected ImageWriter mPostviewSurfaceImageWriter;
 
         protected CaptureResultImageMatcher mImageCaptureCaptureResultImageMatcher =
                 new CaptureResultImageMatcher();
+        protected CaptureResultImageMatcher mPostviewCaptureCaptureResultImageMatcher =
+                new CaptureResultImageMatcher();
         protected HashMap<Integer, Pair<ImageReferenceImpl, TotalCaptureResult>> mCaptureResults =
+                new HashMap<>();
+        protected HashMap<Integer, Pair<ImageReferenceImpl, TotalCaptureResult>> mPostviewResults =
                 new HashMap<>();
         protected RequestProcessorImpl mRequestProcessor;
 
@@ -187,6 +198,7 @@ public abstract class BaseAdvancedExtenderImpl implements AdvancedExtenderImpl {
 
             mPreviewOutputSurfaceConfig = surfaceConfigs.getPreviewOutputSurface();
             mCaptureOutputSurfaceConfig = surfaceConfigs.getImageCaptureOutputSurface();
+            mPostviewOutputSurfaceConfig = surfaceConfigs.getPostviewOutputSurface();
 
             Camera2SessionConfigImplBuilder builder =
                     new Camera2SessionConfigImplBuilder()
@@ -253,6 +265,22 @@ public abstract class BaseAdvancedExtenderImpl implements AdvancedExtenderImpl {
                 }
             }
 
+            // Postview
+            if (mPostviewOutputSurfaceConfig.getSurface() != null) {
+                Camera2OutputConfigImplBuilder postviewOutputConfigBuilder;
+
+                postviewOutputConfigBuilder =
+                        Camera2OutputConfigImplBuilder.newImageReaderConfig(
+                                mPostviewOutputSurfaceConfig.getSize(),
+                                ImageFormat.YUV_420_888,
+                                BASIC_CAPTURE_PROCESS_MAX_IMAGES,
+                                mPostviewOutputSurfaceConfig.getUsage());
+
+                mPostviewOutputConfig = postviewOutputConfigBuilder.build();
+
+                builder.addOutputConfig(mPostviewOutputConfig);
+            }
+
             builder.setColorSpace(surfaceConfigs.getColorSpace());
             addSessionParameter(builder);
 
@@ -283,10 +311,15 @@ public abstract class BaseAdvancedExtenderImpl implements AdvancedExtenderImpl {
 
         @Override
         public void deInitSession() {
-            synchronized (mLockCaptureSurfaceImageWriter) {
+            synchronized (mLockImageWriter) {
                 if (mCaptureSurfaceImageWriter != null) {
                     mCaptureSurfaceImageWriter.close();
                     mCaptureSurfaceImageWriter = null;
+                }
+
+                if (mPostviewSurfaceImageWriter != null) {
+                    mPostviewSurfaceImageWriter.close();
+                    mPostviewSurfaceImageWriter = null;
                 }
             }
         }
@@ -401,30 +434,39 @@ public abstract class BaseAdvancedExtenderImpl implements AdvancedExtenderImpl {
             mRequestProcessor = requestProcessor;
 
             if (mCaptureOutputSurfaceConfig.getSurface() != null) {
-                synchronized (mLockCaptureSurfaceImageWriter) {
-                    if (!mProcessCapture) {
-                        return;
+                synchronized (mLockImageWriter) {
+                    if (mProcessCapture) {
+                        if (isJpeg(mCaptureOutputSurfaceConfig)) {
+                            mCaptureSurfaceImageWriter = new ImageWriter
+                                    .Builder(mCaptureOutputSurfaceConfig.getSurface())
+                                    .setImageFormat(ImageFormat.JPEG)
+                                    .setMaxImages(MAX_NUM_IMAGES)
+                                    // For JPEG format, width x height should be set to (w*h) x 1
+                                    // since the JPEG image is returned as a 1D byte array
+                                    .setWidthAndHeight(
+                                            mCaptureOutputSurfaceConfig.getSize().getWidth()
+                                            * mCaptureOutputSurfaceConfig.getSize().getHeight(),
+                                            1)
+                                    .build();
+                        } else {
+                            mCaptureSurfaceImageWriter = new ImageWriter
+                                    .Builder(mCaptureOutputSurfaceConfig.getSurface())
+                                    .setImageFormat(mCaptureOutputSurfaceConfig.getImageFormat())
+                                    .setMaxImages(MAX_NUM_IMAGES)
+                                    .build();
+                        }
                     }
+                }
+            }
 
-                    if (isJpeg(mCaptureOutputSurfaceConfig)) {
-                        mCaptureSurfaceImageWriter = new ImageWriter
-                                .Builder(mCaptureOutputSurfaceConfig.getSurface())
-                                .setImageFormat(ImageFormat.JPEG)
-                                .setMaxImages(MAX_NUM_IMAGES)
-                                // For JPEG format, width x height should be set to (w*h) x 1
-                                // since the JPEG image is returned as a 1D byte array
-                                .setWidthAndHeight(
-                                        mCaptureOutputSurfaceConfig.getSize().getWidth()
-                                        * mCaptureOutputSurfaceConfig.getSize().getHeight(),
-                                        1)
-                                .build();
-                    } else {
-                        mCaptureSurfaceImageWriter = new ImageWriter
-                                .Builder(mCaptureOutputSurfaceConfig.getSurface())
-                                .setImageFormat(mCaptureOutputSurfaceConfig.getImageFormat())
-                                .setMaxImages(MAX_NUM_IMAGES)
-                                .build();
-                    }
+            if (mPostviewOutputSurfaceConfig != null
+                    && mPostviewOutputSurfaceConfig.getSurface() != null) {
+                synchronized (mLockImageWriter) {
+                    mPostviewSurfaceImageWriter = new ImageWriter
+                            .Builder(mPostviewOutputSurfaceConfig.getSurface())
+                            .setImageFormat(mPostviewOutputSurfaceConfig.getImageFormat())
+                            .setMaxImages(MAX_NUM_IMAGES)
+                            .build();
                 }
             }
         }
@@ -433,6 +475,7 @@ public abstract class BaseAdvancedExtenderImpl implements AdvancedExtenderImpl {
         public void onCaptureSessionEnd() {
             synchronized (this) {
                 mImageCaptureCaptureResultImageMatcher.clear();
+                mPostviewCaptureCaptureResultImageMatcher.clear();
             }
 
             mRequestProcessor = null;
@@ -526,6 +569,7 @@ public abstract class BaseAdvancedExtenderImpl implements AdvancedExtenderImpl {
 
         @Override
         public int startCaptureWithPostview(@NonNull CaptureCallback captureCallback) {
+            Log.d(TAG, "startCaptureWithPostview");
             return startCapture(captureCallback);
         }
 
@@ -556,6 +600,12 @@ public abstract class BaseAdvancedExtenderImpl implements AdvancedExtenderImpl {
                             (RequestBuilder.RequestProcessorRequest) request;
 
                     addCaptureResultKeys(seqId, totalCaptureResult, captureCallback);
+
+                    if (mPostviewOutputSurfaceConfig != null) {
+                        mPostviewCaptureCaptureResultImageMatcher.setCameraCaptureCallback(
+                            totalCaptureResult,
+                            requestProcessorRequest.getCaptureStageId());
+                    }
 
                     if (!mProcessCapture) {
                         captureCallback.onCaptureProcessStarted(seqId);
@@ -594,6 +644,33 @@ public abstract class BaseAdvancedExtenderImpl implements AdvancedExtenderImpl {
 
             mRequestProcessor.submit(requestList, callback);
 
+            if (mPostviewOutputSurfaceConfig != null &&
+                    mPostviewOutputSurfaceConfig.getSurface() != null) {
+                mRequestProcessor.setImageProcessor(mPostviewOutputConfig.getId(),
+                        new ImageProcessorImpl() {
+                                @Override
+                                public void onNextImageAvailable(int outputStreamId,
+                                        long timestampNs,
+                                        @NonNull ImageReferenceImpl imgReferenceImpl,
+                                        @Nullable String physicalCameraId) {
+                                    mPostviewCaptureCaptureResultImageMatcher
+                                            .setInputImage(imgReferenceImpl);
+                                }
+                });
+
+                mPostviewCaptureCaptureResultImageMatcher.setImageReferenceListener(
+                        new CaptureResultImageMatcher.ImageReferenceListener() {
+                                    @Override
+                                    public void onImageReferenceIncoming(
+                                            @NonNull ImageReferenceImpl imageReferenceImpl,
+                                            @NonNull TotalCaptureResult totalCaptureResult,
+                                            int captureId) {
+                                        processImageCapture(imageReferenceImpl, totalCaptureResult,
+                                                captureId, true /*isPostview*/);
+                                    }
+                });
+            }
+
             if (mCaptureOutputSurfaceConfig.getSurface() != null && mProcessCapture) {
                 mRequestProcessor.setImageProcessor(mCaptureOutputConfig.getId(),
                         new ImageProcessorImpl() {
@@ -616,7 +693,7 @@ public abstract class BaseAdvancedExtenderImpl implements AdvancedExtenderImpl {
                                             int captureId) {
                                         captureCallback.onCaptureProcessStarted(seqId);
                                         processImageCapture(imageReferenceImpl, totalCaptureResult,
-                                                captureId);
+                                                captureId, false /*isPostview*/);
                                     }
                 });
             }
@@ -625,20 +702,25 @@ public abstract class BaseAdvancedExtenderImpl implements AdvancedExtenderImpl {
         }
 
         protected void processImageCapture(@NonNull ImageReferenceImpl imageReferenceImpl,
-                @NonNull TotalCaptureResult totalCaptureResult,
-                int captureId) {
+                @NonNull TotalCaptureResult totalCaptureResult, int captureId,
+                boolean isPostview) {
 
-            mCaptureResults.put(captureId, new Pair<>(imageReferenceImpl, totalCaptureResult));
+            HashMap<Integer, Pair<ImageReferenceImpl, TotalCaptureResult>> captureResults =
+                    isPostview ? mPostviewResults : mCaptureResults;
+            ImageWriter imageWriter = isPostview ? mPostviewSurfaceImageWriter :
+                    mCaptureSurfaceImageWriter;
 
-            if (mCaptureResults.keySet().containsAll(mCaptureIdList)) {
+            captureResults.put(captureId, new Pair<>(imageReferenceImpl, totalCaptureResult));
+
+            if (captureResults.keySet().containsAll(mCaptureIdList)) {
                 List<Pair<ImageReferenceImpl, TotalCaptureResult>> imageDataPairs =
-                        new ArrayList<>(mCaptureResults.values());
+                        new ArrayList<>(captureResults.values());
 
                 Image resultImage = null;
                 int captureSurfaceWriterImageFormat = ImageFormat.UNKNOWN;
-                synchronized (mLockCaptureSurfaceImageWriter) {
-                    resultImage = mCaptureSurfaceImageWriter.dequeueInputImage();
-                    captureSurfaceWriterImageFormat = mCaptureSurfaceImageWriter.getFormat();
+                synchronized (mLockImageWriter) {
+                    resultImage = imageWriter.dequeueInputImage();
+                    captureSurfaceWriterImageFormat = imageWriter.getFormat();
                 }
 
                 if (captureSurfaceWriterImageFormat == ImageFormat.JPEG) {
@@ -676,11 +758,11 @@ public abstract class BaseAdvancedExtenderImpl implements AdvancedExtenderImpl {
                                 DEFAULT_CAPTURE_ID).first.get().getTimestamp());
                 }
 
-                synchronized (mLockCaptureSurfaceImageWriter) {
-                    mCaptureSurfaceImageWriter.queueInputImage(resultImage);
+                synchronized (mLockImageWriter) {
+                    imageWriter.queueInputImage(resultImage);
                 }
 
-                for (Pair<ImageReferenceImpl, TotalCaptureResult> val : mCaptureResults.values()) {
+                for (Pair<ImageReferenceImpl, TotalCaptureResult> val : captureResults.values()) {
                     val.first.decrement();
                 }
             } else {
