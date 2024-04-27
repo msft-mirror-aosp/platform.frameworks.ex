@@ -40,6 +40,7 @@ import androidx.annotation.GuardedBy;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -329,5 +330,23 @@ public class NightAdvancedExtenderImpl extends BaseAdvancedExtenderImpl {
     @Override
     public SessionProcessorImpl createSessionProcessor() {
         return new NightAdvancedSessionProcessor();
+    }
+
+    @Override
+    public List<CaptureRequest.Key> getAvailableCaptureRequestKeys() {
+        final CaptureRequest.Key [] CAPTURE_REQUEST_SET = {CaptureRequest.CONTROL_ZOOM_RATIO,
+            CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_REGIONS,
+            CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.JPEG_QUALITY,
+            CaptureRequest.JPEG_ORIENTATION};
+        return Arrays.asList(CAPTURE_REQUEST_SET);
+    }
+
+    @Override
+    public List<CaptureResult.Key> getAvailableCaptureResultKeys() {
+        final CaptureResult.Key [] CAPTURE_RESULT_SET = {CaptureResult.CONTROL_ZOOM_RATIO,
+            CaptureResult.CONTROL_AF_MODE, CaptureResult.CONTROL_AF_REGIONS,
+            CaptureResult.CONTROL_AF_TRIGGER, CaptureResult.CONTROL_AF_STATE,
+            CaptureResult.JPEG_QUALITY, CaptureResult.JPEG_ORIENTATION};
+        return Arrays.asList(CAPTURE_RESULT_SET);
     }
 }
