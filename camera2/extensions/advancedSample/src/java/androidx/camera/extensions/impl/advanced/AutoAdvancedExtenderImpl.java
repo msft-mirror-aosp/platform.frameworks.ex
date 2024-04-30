@@ -33,6 +33,8 @@ import android.view.Surface;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -62,6 +64,39 @@ public class AutoAdvancedExtenderImpl extends BaseAdvancedExtenderImpl {
                 AWB_MODE_DAYLIGHT);
     }
 
+    @Override
+    public boolean isPostviewAvailable() {
+        return true;
+    }
+
+    @Override
+    public Map<Integer, List<Size>> getSupportedPostviewResolutions(Size captureSize) {
+        Map<Integer, List<Size>> res =  new HashMap<>();
+        Map<Integer, List<Size>> captureSupportedResolutions =
+                getSupportedCaptureOutputResolutions(mCameraId);
+        float targetAr = ((float) captureSize.getWidth()) / captureSize.getHeight();
+
+        List<Size> currFormatSizes = captureSupportedResolutions.get(ImageFormat.YUV_420_888);
+        if (currFormatSizes != null) {
+            List<Size> postviewSizes = new ArrayList<>();
+
+            for (Size s : currFormatSizes) {
+                if ((s.equals(captureSize)) || (s.getWidth() > captureSize.getWidth())
+                        || (s.getHeight() > captureSize.getHeight())) continue;
+                float currentAr = ((float) s.getWidth()) / s.getHeight();
+                if (Math.abs(targetAr - currentAr) < 0.01) {
+                    postviewSizes.add(s);
+                }
+            }
+
+            if (!postviewSizes.isEmpty()) {
+                res.put(ImageFormat.YUV_420_888, postviewSizes);
+            }
+        }
+
+        return res;
+    }
+
     public class AutoAdvancedSessionProcessor extends BaseAdvancedSessionProcessor {
 
         public AutoAdvancedSessionProcessor() {
@@ -78,6 +113,11 @@ public class AutoAdvancedExtenderImpl extends BaseAdvancedExtenderImpl {
             RequestBuilder build = new RequestBuilder(mCaptureOutputConfig.getId(),
                     CameraDevice.TEMPLATE_STILL_CAPTURE, DEFAULT_CAPTURE_ID);
             build.setParameters(CaptureRequest.CONTROL_AWB_MODE, AWB_MODE_DAYLIGHT);
+
+            if (mPostviewOutputSurfaceConfig.getSurface() != null) {
+                build.addTargetOutputConfigIds(mPostviewOutputConfig.getId());
+            }
+
             applyParameters(build);
 
             requestList.add(build.build());
