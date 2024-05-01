@@ -247,7 +247,7 @@ public class HdrAdvancedExtenderImpl extends BaseAdvancedExtenderImpl {
 
                 Image resultImage = null;
                 int captureSurfaceWriterImageFormat = ImageFormat.UNKNOWN;
-                synchronized (mLockCaptureSurfaceImageWriter) {
+                synchronized (mLockImageWriter) {
                     resultImage = mCaptureSurfaceImageWriter.dequeueInputImage();
                     captureSurfaceWriterImageFormat = mCaptureSurfaceImageWriter.getFormat();
                 }
@@ -290,7 +290,7 @@ public class HdrAdvancedExtenderImpl extends BaseAdvancedExtenderImpl {
                         UNDER_EXPOSED_CAPTURE_ID).first.get().getTimestamp());
                 }
 
-                synchronized (mLockCaptureSurfaceImageWriter) {
+                synchronized (mLockImageWriter) {
                     mCaptureSurfaceImageWriter.queueInputImage(resultImage);
                 }
 
