@@ -20,6 +20,7 @@ import android.annotation.SuppressLint;
 import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CaptureRequest;
 import android.hardware.camera2.CaptureResult;
+import android.util.Pair;
 import android.util.Range;
 import android.util.Size;
 
@@ -216,4 +217,23 @@ public interface AdvancedExtenderImpl {
      * @since 1.4
      */
     boolean isPostviewAvailable();
+
+    /**
+     * Returns a list of {@link CameraCharacteristics} key/value pairs for apps to use when
+     * querying {@link CameraExtensionCharacteristics#get} and
+     * {@link CameraExtensionCharacteristics#getKeys}. The key/value pairs define the limitations
+     * on the controls returned from {@link #getAvailableCaptureRequestKeys}. If a key is not
+     * present in the returned list, then the capability is either undefined or unsupported.
+     *
+     * <p>For example, an extension may limit the zoom ratio range. In this case, an OEM returns
+     * a new zoom ratio range for the key {@link CameraCharacteristics#CONTROL_ZOOM_RATIO_RANGE}.
+     *
+     * <p>Similarly, an extension may support preview stabilization. In this case, the OEM returns
+     * the array containing the elements
+     * {@link CameraCharacteristics#CONTROL_VIDEO_STABILIZATION_MODE_PREVIEW_STABILIZATION} and
+     * {@link CameraCharacteristics#CONTROL_VIDEO_STABILIZATION_MODE_OFF} for the key
+     * {@link CameraCharacteristics#CONTROL_AVAILABLE_VIDEO_STABILIZATION_MODES}.
+     * @since 1.5
+     */
+    List<Pair<CameraCharacteristics.Key, Object>> getAvailableCharacteristicsKeyValues();
 }
