@@ -21,7 +21,7 @@ android_test {
     name: "AndroidCommonTests",
     certificate: "platform",
     libs: ["android.test.runner.stubs"],
-    sdk_version: "19",
+    sdk_version: "21",
     srcs: ["src/**/*.java"],
     static_libs: [
         "android-common",
