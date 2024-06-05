@@ -17,6 +17,7 @@
 package androidx.camera.extensions.impl.advanced;
 
 import android.annotation.SuppressLint;
+import android.hardware.camera2.params.DynamicRangeProfiles;
 import android.util.Size;
 import android.view.Surface;
 
@@ -39,4 +40,23 @@ public interface OutputSurfaceImpl {
      * Gets the image format.
      */
     int getImageFormat();
+
+    /**
+     * Gets the dataspace.
+     */
+    int getDataspace();
+
+    /**
+     * Get the surface usage bits.
+     */
+    long getUsage();
+
+    /**
+     * Gets the dynamic range profile.
+     *
+     * @since 1.5
+     */
+    default long getDynamicRangeProfile() {
+        return DynamicRangeProfiles.STANDARD;
+    }
 }

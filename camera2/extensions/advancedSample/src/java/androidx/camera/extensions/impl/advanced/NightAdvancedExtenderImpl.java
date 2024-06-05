@@ -27,6 +27,7 @@ import android.hardware.camera2.CaptureFailure;
 import android.hardware.camera2.CaptureRequest;
 import android.hardware.camera2.CaptureResult;
 import android.hardware.camera2.TotalCaptureResult;
+import android.hardware.camera2.params.DynamicRangeProfiles;
 import android.media.Image;
 import android.media.Image.Plane;
 import android.media.ImageWriter;
@@ -39,6 +40,7 @@ import androidx.annotation.GuardedBy;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -69,6 +71,8 @@ public class NightAdvancedExtenderImpl extends BaseAdvancedExtenderImpl {
     }
 
     public class NightAdvancedSessionProcessor extends BaseAdvancedSessionProcessor {
+
+        protected boolean mProcessPreview = true;
 
         public NightAdvancedSessionProcessor() {
             appendTag("::Night");
@@ -101,11 +105,23 @@ public class NightAdvancedExtenderImpl extends BaseAdvancedExtenderImpl {
             if (mPreviewOutputSurfaceConfig.getSurface() != null) {
                 Camera2OutputConfigImplBuilder previewOutputConfigBuilder;
 
-                previewOutputConfigBuilder =
-                        Camera2OutputConfigImplBuilder.newImageReaderConfig(
-                                mPreviewOutputSurfaceConfig.getSize(),
-                                ImageFormat.YUV_420_888,
-                                BASIC_CAPTURE_PROCESS_MAX_IMAGES);
+                if (mPreviewOutputSurfaceConfig.getDynamicRangeProfile() ==
+                        DynamicRangeProfiles.STANDARD) {
+                    previewOutputConfigBuilder =
+                    Camera2OutputConfigImplBuilder.newImageReaderConfig(
+                            mPreviewOutputSurfaceConfig.getSize(),
+                            ImageFormat.YUV_420_888,
+                            BASIC_CAPTURE_PROCESS_MAX_IMAGES,
+                            mPreviewOutputSurfaceConfig.getUsage());
+                } else {
+                    previewOutputConfigBuilder =
+                    Camera2OutputConfigImplBuilder.newSurfaceConfig(
+                        mPreviewOutputSurfaceConfig.getSurface());
+                    previewOutputConfigBuilder.setDynamicRangeProfile(
+                            mPreviewOutputSurfaceConfig.getDynamicRangeProfile());
+
+                    mProcessPreview = false;
+                }
 
                 mPreviewOutputConfig = previewOutputConfigBuilder.build();
 
@@ -114,19 +130,50 @@ public class NightAdvancedExtenderImpl extends BaseAdvancedExtenderImpl {
 
             // Image Capture
             if (mCaptureOutputSurfaceConfig.getSurface() != null) {
-                Camera2OutputConfigImplBuilder captureOutputConfigBuilder;
 
-                captureOutputConfigBuilder =
-                        Camera2OutputConfigImplBuilder.newImageReaderConfig(
-                                mCaptureOutputSurfaceConfig.getSize(),
-                                ImageFormat.YUV_420_888,
-                                BASIC_CAPTURE_PROCESS_MAX_IMAGES);
+                // For this sample, JPEG_R or YCBCR_P010 will not be processed
+                if (isJpegR(mCaptureOutputSurfaceConfig)) {
+                    Camera2OutputConfigImplBuilder captureOutputConfigBuilder;
 
-                mCaptureOutputConfig = captureOutputConfigBuilder.build();
+                    captureOutputConfigBuilder =
+                            Camera2OutputConfigImplBuilder.newSurfaceConfig(
+                                        mCaptureOutputSurfaceConfig.getSurface());
 
-                builder.addOutputConfig(mCaptureOutputConfig);
+                    mCaptureOutputConfig = captureOutputConfigBuilder.build();
+
+                    builder.addOutputConfig(mCaptureOutputConfig);
+                    mProcessCapture = false;
+                } else if (mCaptureOutputSurfaceConfig.getImageFormat() == ImageFormat.YCBCR_P010) {
+                    Camera2OutputConfigImplBuilder captureOutputConfigBuilder;
+
+                    captureOutputConfigBuilder =
+                            Camera2OutputConfigImplBuilder.newSurfaceConfig(
+                                        mCaptureOutputSurfaceConfig.getSurface());
+
+                    captureOutputConfigBuilder.setDynamicRangeProfile(
+                            mCaptureOutputSurfaceConfig.getDynamicRangeProfile());
+
+                    mCaptureOutputConfig = captureOutputConfigBuilder.build();
+
+                    builder.addOutputConfig(mCaptureOutputConfig);
+                    mProcessCapture = false;
+                } else {
+                    Camera2OutputConfigImplBuilder captureOutputConfigBuilder;
+
+                    captureOutputConfigBuilder =
+                            Camera2OutputConfigImplBuilder.newImageReaderConfig(
+                                    mCaptureOutputSurfaceConfig.getSize(),
+                                    ImageFormat.YUV_420_888,
+                                    BASIC_CAPTURE_PROCESS_MAX_IMAGES,
+                                    mCaptureOutputSurfaceConfig.getUsage());
+
+                    mCaptureOutputConfig = captureOutputConfigBuilder.build();
+
+                    builder.addOutputConfig(mCaptureOutputConfig);
+                }
             }
 
+            builder.setColorSpace(surfaceConfigs.getColorSpace());
             addSessionParameter(builder);
 
             return builder.build();
@@ -152,6 +199,10 @@ public class NightAdvancedExtenderImpl extends BaseAdvancedExtenderImpl {
         @Override
         public void onCaptureSessionStart(@NonNull RequestProcessorImpl requestProcessor) {
             super.onCaptureSessionStart(requestProcessor);
+
+            if (!mProcessPreview) {
+                return;
+            }
 
             if (mPreviewOutputSurfaceConfig.getSurface() != null) {
                 synchronized (mLockPreviewSurfaceImageWriter) {
@@ -229,8 +280,10 @@ public class NightAdvancedExtenderImpl extends BaseAdvancedExtenderImpl {
 
                     addCaptureResultKeys(seqId, totalCaptureResult, captureCallback);
 
-                    mCaptureResultImageMatcher.setCameraCaptureCallback(
-                                totalCaptureResult);
+                    if (mProcessPreview) {
+                        mCaptureResultImageMatcher.setCameraCaptureCallback(
+                            totalCaptureResult);
+                    }
 
                     captureCallback.onCaptureProcessStarted(seqId);
                 }
@@ -277,5 +330,23 @@ public class NightAdvancedExtenderImpl extends BaseAdvancedExtenderImpl {
     @Override
     public SessionProcessorImpl createSessionProcessor() {
         return new NightAdvancedSessionProcessor();
+    }
+
+    @Override
+    public List<CaptureRequest.Key> getAvailableCaptureRequestKeys() {
+        final CaptureRequest.Key [] CAPTURE_REQUEST_SET = {CaptureRequest.CONTROL_ZOOM_RATIO,
+            CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_REGIONS,
+            CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.JPEG_QUALITY,
+            CaptureRequest.JPEG_ORIENTATION};
+        return Arrays.asList(CAPTURE_REQUEST_SET);
+    }
+
+    @Override
+    public List<CaptureResult.Key> getAvailableCaptureResultKeys() {
+        final CaptureResult.Key [] CAPTURE_RESULT_SET = {CaptureResult.CONTROL_ZOOM_RATIO,
+            CaptureResult.CONTROL_AF_MODE, CaptureResult.CONTROL_AF_REGIONS,
+            CaptureResult.CONTROL_AF_TRIGGER, CaptureResult.CONTROL_AF_STATE,
+            CaptureResult.JPEG_QUALITY, CaptureResult.JPEG_ORIENTATION};
+        return Arrays.asList(CAPTURE_RESULT_SET);
     }
 }

@@ -1,4 +1,4 @@
-// Copyright (C) 2014 The Android Open Source Project
+// Copyright (C) 2023 The Android Open Source Project
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,23 +17,11 @@ package {
 }
 
 android_app {
-
-    name: "FrameSequenceSample",
-    // java dependency
-    static_libs: ["android-common-framesequence"],
-    jni_libs: ["libframesequence"],
-    // proguard for framesequence library code
-    optimize: {
-        proguard_flags_files: ["proguard.flags"],
-    },
-    sdk_version: "19",
+    name: "EyesFreeVidService",
     srcs: ["src/**/*.java"],
-    resource_dirs: ["res"],
-    aaptflags: [
-        "--auto-add-overlay",
-        "--extra-packages",
-        "com.android.framesequence.samples",
+    static_libs: [
+        "androidx.annotation_annotation"
     ],
-
-    product_specific: true,
+    platform_apis: true,
+    system_ext_specific: true
 }

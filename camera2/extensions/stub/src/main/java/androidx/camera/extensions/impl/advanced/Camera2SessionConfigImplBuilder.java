@@ -20,6 +20,7 @@ package androidx.camera.extensions.impl.advanced;
 import android.annotation.SuppressLint;
 import android.hardware.camera2.CameraDevice;
 import android.hardware.camera2.CaptureRequest;
+import android.hardware.camera2.params.ColorSpaceProfiles;
 import android.hardware.camera2.params.SessionConfiguration;
 
 import java.util.ArrayList;
@@ -33,6 +34,7 @@ import java.util.Map;
 @SuppressLint("UnknownNullness")
 public class Camera2SessionConfigImplBuilder {
     private int mSessionTemplateId = CameraDevice.TEMPLATE_PREVIEW;
+    private int mColorSpace = ColorSpaceProfiles.UNSPECIFIED;
     private int mSessionType = SessionConfiguration.SESSION_REGULAR;
     Map<CaptureRequest.Key<?>, Object> mSessionParameters = new HashMap<>();
     List<Camera2OutputConfigImpl> mCamera2OutputConfigs = new ArrayList<>();
@@ -64,6 +66,21 @@ public class Camera2SessionConfigImplBuilder {
     public Camera2SessionConfigImplBuilder setSessionTemplateId(int templateId) {
         mSessionTemplateId = templateId;
         return this;
+    }
+
+    /**
+     * Sets the color space.
+     */
+    public Camera2SessionConfigImplBuilder setColorSpace(int colorSpace) {
+        mColorSpace = colorSpace;
+        return this;
+    }
+
+    /**
+     * Gets the color space.
+     */
+    public int getColorSpace() {
+        return mColorSpace;
     }
 
     /**
@@ -105,12 +122,14 @@ public class Camera2SessionConfigImplBuilder {
             Camera2SessionConfigImpl {
         int mSessionTemplateId;
         int mSessionType;
+        int mColorSpace = ColorSpaceProfiles.UNSPECIFIED;
         Map<CaptureRequest.Key<?>, Object> mSessionParameters;
         List<Camera2OutputConfigImpl> mCamera2OutputConfigs;
 
         Camera2SessionConfigImplImpl(Camera2SessionConfigImplBuilder builder) {
             mSessionTemplateId = builder.getSessionTemplateId();
             mSessionParameters = builder.getSessionParameters();
+            mColorSpace = builder.getColorSpace();
             mCamera2OutputConfigs = builder.getCamera2OutputConfigs();
             mSessionType = builder.getSessionType();
         }
@@ -133,6 +152,11 @@ public class Camera2SessionConfigImplBuilder {
         @Override
         public int getSessionType() {
             return mSessionType;
+        }
+
+        @Override
+        public int getColorSpace() {
+            return mColorSpace;
         }
     }
 }

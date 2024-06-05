@@ -17,6 +17,7 @@
 package androidx.camera.extensions.impl.advanced;
 
 import android.annotation.SuppressLint;
+import android.hardware.camera2.params.DynamicRangeProfiles;
 import android.hardware.camera2.params.OutputConfiguration;
 import android.util.Size;
 import android.view.Surface;
@@ -35,6 +36,7 @@ public class Camera2OutputConfigImplBuilder {
     private int mSurfaceGroupId = OutputConfiguration.SURFACE_GROUP_ID_NONE;
     private String mPhysicalCameraId;
     private List<Camera2OutputConfigImpl> mSurfaceSharingConfigs;
+    private long mDynamicRangeProfile = DynamicRangeProfiles.STANDARD;
 
     private Camera2OutputConfigImplBuilder(OutputConfigImplImpl outputConfig) {
         mOutputConfig = outputConfig;
@@ -49,9 +51,9 @@ public class Camera2OutputConfigImplBuilder {
      * with the given parameters.
      */
     public static Camera2OutputConfigImplBuilder newImageReaderConfig(
-            Size size, int imageFormat, int maxImages) {
+            Size size, int imageFormat, int maxImages, long usage) {
         return new Camera2OutputConfigImplBuilder(
-                new ImageReaderOutputConfigImplImpl(size, imageFormat, maxImages));
+                new ImageReaderOutputConfigImplImpl(size, imageFormat, maxImages, usage));
     }
 
     /**
@@ -93,6 +95,14 @@ public class Camera2OutputConfigImplBuilder {
     }
 
     /**
+     * Set dynamic range profile.
+     */
+    public Camera2OutputConfigImplBuilder setDynamicRangeProfile(long dynamicRangeProfile) {
+        mDynamicRangeProfile = dynamicRangeProfile;
+        return this;
+    }
+
+    /**
      * Sets surface group id.
      */
     public Camera2OutputConfigImplBuilder setSurfaceGroupId(int surfaceGroupId) {
@@ -108,6 +118,7 @@ public class Camera2OutputConfigImplBuilder {
         mOutputConfig.setPhysicalCameraId(mPhysicalCameraId);
         mOutputConfig.setSurfaceGroup(mSurfaceGroupId);
         mOutputConfig.setSurfaceSharingConfigs(mSurfaceSharingConfigs);
+        mOutputConfig.setDynamicRangeProfile(mDynamicRangeProfile);
         return mOutputConfig;
     }
 
@@ -115,6 +126,7 @@ public class Camera2OutputConfigImplBuilder {
         private int mId;
         private int mSurfaceGroup;
         private String mPhysicalCameraId;
+        private long mDynamicRangeProfile;
         private List<Camera2OutputConfigImpl> mSurfaceSharingConfigs;
 
         OutputConfigImplImpl() {
@@ -122,6 +134,7 @@ public class Camera2OutputConfigImplBuilder {
             mSurfaceGroup = 0;
             mPhysicalCameraId = null;
             mSurfaceSharingConfigs = null;
+            mDynamicRangeProfile = DynamicRangeProfiles.STANDARD;
         }
 
         @Override
@@ -140,6 +153,11 @@ public class Camera2OutputConfigImplBuilder {
         }
 
         @Override
+        public long getDynamicRangeProfile() {
+            return mDynamicRangeProfile;
+        }
+
+        @Override
         public List<Camera2OutputConfigImpl> getSurfaceSharingOutputConfigs() {
             return mSurfaceSharingConfigs;
         }
@@ -154,6 +172,10 @@ public class Camera2OutputConfigImplBuilder {
 
         public void setPhysicalCameraId(String physicalCameraId) {
             mPhysicalCameraId = physicalCameraId;
+        }
+
+        public void setDynamicRangeProfile(long dynamicRangeProfile) {
+            mDynamicRangeProfile = dynamicRangeProfile;
         }
 
         public void setSurfaceSharingConfigs(
@@ -181,11 +203,14 @@ public class Camera2OutputConfigImplBuilder {
         private Size mSize;
         private int mImageFormat;
         private int mMaxImages;
+        private long mUsage;
 
-        ImageReaderOutputConfigImplImpl(Size size, int imageFormat, int maxImages) {
+        ImageReaderOutputConfigImplImpl(Size size, int imageFormat, int maxImages,
+                long usage) {
             mSize = size;
             mImageFormat = imageFormat;
             mMaxImages = maxImages;
+            mUsage = usage;
         }
 
         @Override
@@ -201,6 +226,11 @@ public class Camera2OutputConfigImplBuilder {
         @Override
         public int getMaxImages() {
             return mMaxImages;
+        }
+
+        @Override
+        public long getUsage() {
+            return mUsage;
         }
     }
 

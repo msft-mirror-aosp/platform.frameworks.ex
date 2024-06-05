@@ -129,7 +129,11 @@ public class HdrAdvancedExtenderImpl extends BaseAdvancedExtenderImpl {
         @Override
         public int startCapture(@NonNull CaptureCallback captureCallback) {
             List<RequestProcessorImpl.Request> requestList = new ArrayList<>();
-            addCaptureRequestParameters(requestList);
+            if (mProcessCapture) {
+                addCaptureRequestParameters(requestList);
+            } else {
+                super.addCaptureRequestParameters(requestList);
+            }
             final int seqId = mNextCaptureSequenceId.getAndIncrement();
 
             RequestProcessorImpl.Callback callback = new RequestProcessorImpl.Callback() {
@@ -138,7 +142,7 @@ public class HdrAdvancedExtenderImpl extends BaseAdvancedExtenderImpl {
                 @Override
                 public void onCaptureStarted(RequestProcessorImpl.Request request,
                         long frameNumber, long timestamp) {
-                    if (!mCaptureStarted) {
+                    if (!mCaptureStarted || !mProcessCapture) {
                         mCaptureStarted = true;
                         captureCallback.onCaptureStarted(seqId, timestamp);
                     }
@@ -156,9 +160,14 @@ public class HdrAdvancedExtenderImpl extends BaseAdvancedExtenderImpl {
                     RequestBuilder.RequestProcessorRequest requestProcessorRequest =
                             (RequestBuilder.RequestProcessorRequest) request;
 
-                    mImageCaptureCaptureResultImageMatcher.setCameraCaptureCallback(
-                            totalCaptureResult,
-                            requestProcessorRequest.getCaptureStageId());
+                    if (!mProcessCapture) {
+                        captureCallback.onCaptureProcessStarted(seqId);
+                        addCaptureResultKeys(seqId, totalCaptureResult, captureCallback);
+                    } else {
+                        mImageCaptureCaptureResultImageMatcher.setCameraCaptureCallback(
+                                totalCaptureResult,
+                                requestProcessorRequest.getCaptureStageId());
+                    }
                 }
 
                 @Override
@@ -189,7 +198,7 @@ public class HdrAdvancedExtenderImpl extends BaseAdvancedExtenderImpl {
 
             mRequestProcessor.submit(requestList, callback);
 
-            if (mCaptureOutputSurfaceConfig.getSurface() != null) {
+            if (mCaptureOutputSurfaceConfig.getSurface() != null && mProcessCapture) {
                 mRequestProcessor.setImageProcessor(mCaptureOutputConfig.getId(),
                         new ImageProcessorImpl() {
                             boolean mCaptureStarted = false;
@@ -238,7 +247,7 @@ public class HdrAdvancedExtenderImpl extends BaseAdvancedExtenderImpl {
 
                 Image resultImage = null;
                 int captureSurfaceWriterImageFormat = ImageFormat.UNKNOWN;
-                synchronized (mLockCaptureSurfaceImageWriter) {
+                synchronized (mLockImageWriter) {
                     resultImage = mCaptureSurfaceImageWriter.dequeueInputImage();
                     captureSurfaceWriterImageFormat = mCaptureSurfaceImageWriter.getFormat();
                 }
@@ -281,7 +290,7 @@ public class HdrAdvancedExtenderImpl extends BaseAdvancedExtenderImpl {
                         UNDER_EXPOSED_CAPTURE_ID).first.get().getTimestamp());
                 }
 
-                synchronized (mLockCaptureSurfaceImageWriter) {
+                synchronized (mLockImageWriter) {
                     mCaptureSurfaceImageWriter.queueInputImage(resultImage);
                 }
 

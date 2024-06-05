@@ -20,6 +20,7 @@ import android.annotation.SuppressLint;
 import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CaptureRequest;
 import android.hardware.camera2.CaptureResult;
+import android.util.Pair;
 import android.util.Range;
 import android.util.Size;
 
@@ -102,6 +103,11 @@ public class NightAdvancedExtenderImpl implements AdvancedExtenderImpl {
 
     @Override
     public boolean isPostviewAvailable() {
+        throw new RuntimeException("Stub, replace with implementation.");
+    }
+
+    @Override
+    public List<Pair<CameraCharacteristics.Key, Object>> getAvailableCharacteristicsKeyValues() {
         throw new RuntimeException("Stub, replace with implementation.");
     }
 }
