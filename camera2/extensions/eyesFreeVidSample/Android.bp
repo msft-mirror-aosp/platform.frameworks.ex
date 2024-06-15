@@ -20,8 +20,19 @@ android_app {
     name: "EyesFreeVidService",
     srcs: ["src/**/*.java"],
     static_libs: [
-        "androidx.annotation_annotation"
+        "androidx.annotation_annotation",
     ],
     platform_apis: true,
-    system_ext_specific: true
+    system_ext_specific: true,
+    required: ["privapp-permissions-efv.xml"],
+    privileged: true,
+    certificate: "platform",
+}
+
+prebuilt_etc {
+    name: "privapp-permissions-efv.xml",
+    system_ext_specific: true,
+    sub_dir: "permissions",
+    src: "privapp-permissions-efv.xml",
+    filename_from_src: true,
 }
