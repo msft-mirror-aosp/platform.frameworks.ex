@@ -21,9 +21,12 @@ android_test {
     name: "AndroidCommonTests",
     certificate: "platform",
     libs: ["android.test.runner.stubs"],
-    sdk_version: "8",
+    sdk_version: "19",
     srcs: ["src/**/*.java"],
-    static_libs: ["android-common"],
+    static_libs: [
+        "android-common",
+        "androidx.test.rules",
+    ],
     optimize: {
         enabled: false,
     },
