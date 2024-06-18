@@ -38,4 +38,9 @@ public interface ImageReaderOutputConfigImpl extends Camera2OutputConfigImpl {
      * Gets the capacity for TYPE_IMAGEREADER.
      */
     int getMaxImages();
+
+    /**
+     * Gets the surface usage bits.
+     */
+    long getUsage();
 }
