@@ -18,8 +18,9 @@ package com.android.common;
 
 import android.content.SharedPreferences;
 import android.test.AndroidTestCase;
-import android.test.suitebuilder.annotation.MediumTest;
-import android.test.suitebuilder.annotation.SmallTest;
+
+import androidx.test.filters.MediumTest;
+import androidx.test.filters.SmallTest;
 
 public class OperationSchedulerTest extends AndroidTestCase {
     /**

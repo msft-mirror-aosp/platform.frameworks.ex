@@ -19,9 +19,10 @@ import android.content.Context;
 import android.database.Cursor;
 import android.database.MatrixCursor;
 import android.test.AndroidTestCase;
-import android.test.suitebuilder.annotation.SmallTest;
 import android.view.View;
 import android.view.ViewGroup;
+
+import androidx.test.filters.SmallTest;
 
 /**
  * Tests for {@link CompositeCursorAdapter}.
