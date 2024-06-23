@@ -105,7 +105,8 @@ public class NightAdvancedExtenderImpl extends BaseAdvancedExtenderImpl {
                         Camera2OutputConfigImplBuilder.newImageReaderConfig(
                                 mPreviewOutputSurfaceConfig.getSize(),
                                 ImageFormat.YUV_420_888,
-                                BASIC_CAPTURE_PROCESS_MAX_IMAGES);
+                                BASIC_CAPTURE_PROCESS_MAX_IMAGES,
+                                mPreviewOutputSurfaceConfig.getUsage());
 
                 mPreviewOutputConfig = previewOutputConfigBuilder.build();
 
@@ -114,17 +115,33 @@ public class NightAdvancedExtenderImpl extends BaseAdvancedExtenderImpl {
 
             // Image Capture
             if (mCaptureOutputSurfaceConfig.getSurface() != null) {
-                Camera2OutputConfigImplBuilder captureOutputConfigBuilder;
 
-                captureOutputConfigBuilder =
-                        Camera2OutputConfigImplBuilder.newImageReaderConfig(
-                                mCaptureOutputSurfaceConfig.getSize(),
-                                ImageFormat.YUV_420_888,
-                                BASIC_CAPTURE_PROCESS_MAX_IMAGES);
+                // For this sample, JPEG_R will not be processed
+                if (isJpegR(mCaptureOutputSurfaceConfig)) {
+                    Camera2OutputConfigImplBuilder captureOutputConfigBuilder;
 
-                mCaptureOutputConfig = captureOutputConfigBuilder.build();
+                    captureOutputConfigBuilder =
+                            Camera2OutputConfigImplBuilder.newSurfaceConfig(
+                                        mCaptureOutputSurfaceConfig.getSurface());
 
-                builder.addOutputConfig(mCaptureOutputConfig);
+                    mCaptureOutputConfig = captureOutputConfigBuilder.build();
+
+                    builder.addOutputConfig(mCaptureOutputConfig);
+                    mProcessCapture = false;
+                } else {
+                    Camera2OutputConfigImplBuilder captureOutputConfigBuilder;
+
+                    captureOutputConfigBuilder =
+                            Camera2OutputConfigImplBuilder.newImageReaderConfig(
+                                    mCaptureOutputSurfaceConfig.getSize(),
+                                    ImageFormat.YUV_420_888,
+                                    BASIC_CAPTURE_PROCESS_MAX_IMAGES,
+                                    mCaptureOutputSurfaceConfig.getUsage());
+
+                    mCaptureOutputConfig = captureOutputConfigBuilder.build();
+
+                    builder.addOutputConfig(mCaptureOutputConfig);
+                }
             }
 
             addSessionParameter(builder);
