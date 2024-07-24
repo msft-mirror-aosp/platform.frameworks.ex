@@ -19,6 +19,7 @@ package androidx.camera.extensions.impl.advanced;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.hardware.camera2.CameraCharacteristics;
+import android.hardware.camera2.CaptureFailure;
 import android.hardware.camera2.CaptureRequest;
 import android.hardware.camera2.CaptureResult;
 import android.util.Pair;
@@ -140,8 +141,12 @@ public interface SessionProcessorImpl {
      * implementations are provided in the stub for OEM to construct the
      * {@link Camera2OutputConfigImpl} and {@link Camera2SessionConfigImpl} instances.
      *
-     * @param previewSurfaceConfig       output surface for preview
-     * @param imageCaptureSurfaceConfig  output surface for image capture.
+     * @param previewSurfaceConfig       output surface for preview, which may contain a
+     *                                   <code>null</code> surface if the app doesn't specify the
+     *                                   preview surface.
+     * @param imageCaptureSurfaceConfig  output surface for still capture, which may contain a
+     *                                   <code>null</code> surface if the app doesn't specify the
+     *                                   still capture surface.
      * @param imageAnalysisSurfaceConfig an optional output config for image analysis
      *                                   (YUV_420_888).
      * @return a {@link Camera2SessionConfigImpl} consisting of a list of
@@ -386,5 +391,20 @@ public interface SessionProcessorImpl {
          * @since 1.4
          */
         void onCaptureProcessProgressed(int progress);
+
+        /**
+         * This method is called instead of
+         * {@link #onCaptureProcessStarted} when the camera device failed
+         * to produce the required input for the device-specific extension. The
+         * cause could be a failed camera capture request, a failed
+         * capture result or dropped camera frame.
+         * The callback allows clients to be notified
+         * about failure reason.
+         *
+         * @param captureSequenceId id of the current capture sequence
+         * @param reason            The capture failure reason @see CaptureFailure#FailureReason
+         * @since 1.5
+         */
+        void onCaptureFailed(int captureSequenceId, int reason);
     }
 }

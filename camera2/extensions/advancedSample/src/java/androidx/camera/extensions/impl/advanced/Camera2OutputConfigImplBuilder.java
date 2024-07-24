@@ -49,9 +49,9 @@ public class Camera2OutputConfigImplBuilder {
      * with the given parameters.
      */
     public static Camera2OutputConfigImplBuilder newImageReaderConfig(
-            Size size, int imageFormat, int maxImages) {
+            Size size, int imageFormat, int maxImages, long usage) {
         return new Camera2OutputConfigImplBuilder(
-                new ImageReaderOutputConfigImplImpl(size, imageFormat, maxImages));
+                new ImageReaderOutputConfigImplImpl(size, imageFormat, maxImages, usage));
     }
 
     /**
@@ -181,11 +181,14 @@ public class Camera2OutputConfigImplBuilder {
         private Size mSize;
         private int mImageFormat;
         private int mMaxImages;
+        private long mUsage;
 
-        ImageReaderOutputConfigImplImpl(Size size, int imageFormat, int maxImages) {
+        ImageReaderOutputConfigImplImpl(Size size, int imageFormat, int maxImages,
+                long usage) {
             mSize = size;
             mImageFormat = imageFormat;
             mMaxImages = maxImages;
+            mUsage = usage;
         }
 
         @Override
@@ -201,6 +204,11 @@ public class Camera2OutputConfigImplBuilder {
         @Override
         public int getMaxImages() {
             return mMaxImages;
+        }
+
+        @Override
+        public long getUsage() {
+            return mUsage;
         }
     }
 

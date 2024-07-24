@@ -13,6 +13,7 @@
 // limitations under the License.
 
 package {
+    default_team: "trendy_team_system_ui_please_use_a_more_specific_subteam_if_possible_",
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
@@ -20,9 +21,12 @@ android_test {
     name: "AndroidCommonTests",
     certificate: "platform",
     libs: ["android.test.runner.stubs"],
-    sdk_version: "8",
+    sdk_version: "21",
     srcs: ["src/**/*.java"],
-    static_libs: ["android-common"],
+    static_libs: [
+        "android-common",
+        "androidx.test.rules",
+    ],
     optimize: {
         enabled: false,
     },
