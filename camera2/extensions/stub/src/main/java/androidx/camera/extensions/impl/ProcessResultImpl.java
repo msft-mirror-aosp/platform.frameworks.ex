@@ -16,9 +16,10 @@
 
 package androidx.camera.extensions.impl;
 
-import android.annotation.SuppressLint;
 import android.hardware.camera2.CaptureResult;
 import android.util.Pair;
+
+import android.annotation.NonNull;
 
 import java.util.List;
 
@@ -26,7 +27,6 @@ import java.util.List;
  * Allows clients to receive information about the capture result values of processed frames.
  *
  */
-@SuppressLint("UnknownNullness")
 public interface ProcessResultImpl {
     /**
      * Capture result callback that needs to be called when the process capture results are
@@ -41,7 +41,8 @@ public interface ProcessResultImpl {
      *                             supported and applied by the corresponding framework.
      * @since 1.3
      */
-    void onCaptureCompleted(long shutterTimestamp, List<Pair<CaptureResult.Key, Object>> result);
+    void onCaptureCompleted(long shutterTimestamp,
+            @NonNull List<Pair<CaptureResult.Key, Object>> result);
 
     /**
      * Capture progress callback that needs to be called when the process capture is
@@ -56,5 +57,5 @@ public interface ProcessResultImpl {
      * @param progress             Value between 0 and 100.
      * @since 1.4
      */
-    void onCaptureProcessProgressed(int progress);
+    default void onCaptureProcessProgressed(int progress) {}
 }

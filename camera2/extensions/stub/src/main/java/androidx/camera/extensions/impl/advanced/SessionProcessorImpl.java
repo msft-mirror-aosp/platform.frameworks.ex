@@ -16,14 +16,15 @@
 
 package androidx.camera.extensions.impl.advanced;
 
-import android.annotation.SuppressLint;
 import android.content.Context;
 import android.hardware.camera2.CameraCharacteristics;
-import android.hardware.camera2.CaptureFailure;
 import android.hardware.camera2.CaptureRequest;
 import android.hardware.camera2.CaptureResult;
 import android.util.Pair;
 import android.view.Surface;
+
+import android.annotation.NonNull;
+import android.annotation.Nullable;
 
 import java.util.Map;
 
@@ -58,8 +59,9 @@ import java.util.Map;
  *
  * (6) {@link #deInitSession}: called when CameraCaptureSession is closed.
  * </pre>
+ *
+ * @since 1.2
  */
-@SuppressLint("UnknownNullness")
 public interface SessionProcessorImpl {
     /**
      * Initializes the session for the extension. This is where the OEMs allocate resources for
@@ -105,11 +107,12 @@ public interface SessionProcessorImpl {
      *
      * @since 1.4
      */
+    @NonNull
     Camera2SessionConfigImpl initSession(
-            String cameraId,
-            Map<String, CameraCharacteristics> cameraCharacteristicsMap,
-            Context context,
-            OutputSurfaceConfigurationImpl surfaceConfigs);
+            @NonNull String cameraId,
+            @NonNull Map<String, CameraCharacteristics> cameraCharacteristicsMap,
+            @NonNull Context context,
+            @NonNull OutputSurfaceConfigurationImpl surfaceConfigs);
 
     /**
      * Initializes the session for the extension. This is where the OEMs allocate resources for
@@ -156,13 +159,14 @@ public interface SessionProcessorImpl {
      * supported or mandatory stream combination BUT OEM must ensure this list will always
      * produce a valid camera capture session.
      */
+    @NonNull
     Camera2SessionConfigImpl initSession(
-            String cameraId,
-            Map<String, CameraCharacteristics> cameraCharacteristicsMap,
-            Context context,
-            OutputSurfaceImpl previewSurfaceConfig,
-            OutputSurfaceImpl imageCaptureSurfaceConfig,
-            OutputSurfaceImpl imageAnalysisSurfaceConfig);
+            @NonNull String cameraId,
+            @NonNull Map<String, CameraCharacteristics> cameraCharacteristicsMap,
+            @NonNull Context context,
+            @NonNull OutputSurfaceImpl previewSurfaceConfig,
+            @NonNull OutputSurfaceImpl imageCaptureSurfaceConfig,
+            @Nullable OutputSurfaceImpl imageAnalysisSurfaceConfig);
 
     /**
      * Notify to de-initialize the extension. This callback will be invoked after
@@ -175,15 +179,19 @@ public interface SessionProcessorImpl {
     /**
      * CameraX / Camera2 would call these API’s to pass parameters from the app to the OEM. It’s
      * expected that the OEM would (eventually) update the repeating request if the keys are
-     * supported. Setting a value to null explicitly un-sets the value.
+     * supported. These parameters should be set by the OEM on all capture requests sent during
+     * {@link #startRepeating(CaptureCallback)},
+     * {@link #startCapture(CaptureCallback)} and {@link #startTrigger(Map, CaptureCallback)}.
      */
-    void setParameters(Map<CaptureRequest.Key<?>, Object> parameters);
+    void setParameters(@NonNull Map<CaptureRequest.Key<?>, Object> parameters);
 
     /**
      * CameraX / Camera2 will call this interface in response to client requests involving
      * the output preview surface. Typical examples include requests that include AF/AE triggers.
      * Extensions can disregard any capture request keys that were not advertised in
-     * {@link AdvancedExtenderImpl#getAvailableCaptureRequestKeys}.
+     * {@link AdvancedExtenderImpl#getAvailableCaptureRequestKeys}. In addition to the
+     * Key/value map in the {@code trigger} parameter, the capture request must also
+     * include the parameters set in {@link #setParameters(Map)}.
      *
      * @param triggers Capture request key value map.
      * @param callback a callback to report the status.
@@ -193,7 +201,8 @@ public interface SessionProcessorImpl {
      *
      * @since 1.3
      */
-    int startTrigger(Map<CaptureRequest.Key<?>, Object> triggers, CaptureCallback callback);
+    int startTrigger(@NonNull Map<CaptureRequest.Key<?>, Object> triggers,
+            @NonNull CaptureCallback callback);
 
     /**
      * This will be invoked once after the {@link android.hardware.camera2.CameraCaptureSession}
@@ -201,7 +210,7 @@ public interface SessionProcessorImpl {
      * requests or set repeating requests. This ExtensionRequestProcessor will be valid to use
      * until onCaptureSessionEnd is called.
      */
-    void onCaptureSessionStart(RequestProcessorImpl requestProcessor);
+    void onCaptureSessionStart(@NonNull RequestProcessorImpl requestProcessor);
 
     /**
      * This will be invoked before the {@link android.hardware.camera2.CameraCaptureSession} is
@@ -213,12 +222,13 @@ public interface SessionProcessorImpl {
     /**
      * Starts the repeating request after CameraCaptureSession is called. Vendor should start the
      * repeating request by {@link RequestProcessorImpl}. Vendor can also update the
-     * repeating request when needed later.
+     * repeating request when needed later. The repeating request is expected to contain the
+     * parameters set in {@link #setParameters(Map)}.
      *
      * @param callback a callback to report the status.
      * @return the id of the capture sequence.
      */
-    int startRepeating(CaptureCallback callback);
+    int startRepeating(@NonNull CaptureCallback callback);
 
     /**
      * Stop the repeating request. To prevent OEM from not calling stopRepeating, CameraX will
@@ -233,7 +243,9 @@ public interface SessionProcessorImpl {
      *
      * When the capture is completed, {@link CaptureCallback#onCaptureSequenceCompleted}
      * is called and {@code OnImageAvailableListener#onImageAvailable}
-     * will also be called on the ImageReader that creates the image capture output surface.
+     * will also be called on the ImageReader that creates the image capture output surface. All
+     * the capture requests are expected to contain the parameters set in
+     * {@link #setParameters(Map)}.
      *
      * <p>Only one capture can perform at a time. Starting a capture when another capture is running
      * will cause onCaptureFailed to be called immediately.
@@ -241,7 +253,7 @@ public interface SessionProcessorImpl {
      * @param callback a callback to report the status.
      * @return the id of the capture sequence.
      */
-    int startCapture(CaptureCallback callback);
+    int startCapture(@NonNull CaptureCallback callback);
 
     /**
      * Start a multi-frame capture with a postview. {@link #startCapture(CaptureCallback)}
@@ -261,7 +273,7 @@ public interface SessionProcessorImpl {
      * @return the id of the capture sequence.
      * @since 1.4
      */
-    int startCaptureWithPostview(CaptureCallback callback);
+    int startCaptureWithPostview(@NonNull CaptureCallback callback);
 
     /**
      * Abort all capture tasks.
@@ -289,6 +301,7 @@ public interface SessionProcessorImpl {
      * null pair.
      * @since 1.4
      */
+    @Nullable
     Pair<Long, Long> getRealtimeCaptureLatency();
 
     /**
@@ -373,9 +386,10 @@ public interface SessionProcessorImpl {
          *                             as part of this callback. Both Camera2 and CameraX guarantee
          *                             that those two settings and results are always supported and
          *                             applied by the corresponding framework.
+         * @since 1.3
          */
-        void onCaptureCompleted(long timestamp, int captureSequenceId,
-                Map<CaptureResult.Key, Object> result);
+        default void onCaptureCompleted(long timestamp, int captureSequenceId,
+                @NonNull Map<CaptureResult.Key, Object> result) {}
 
         /**
          * Capture progress callback that needs to be called when the process capture is
@@ -390,7 +404,7 @@ public interface SessionProcessorImpl {
          * @param progress             Value between 0 and 100.
          * @since 1.4
          */
-        void onCaptureProcessProgressed(int progress);
+        default void onCaptureProcessProgressed(int progress) {}
 
         /**
          * This method is called instead of
@@ -405,6 +419,6 @@ public interface SessionProcessorImpl {
          * @param reason            The capture failure reason @see CaptureFailure#FailureReason
          * @since 1.5
          */
-        void onCaptureFailed(int captureSequenceId, int reason);
+        default void onCaptureFailed(int captureSequenceId, int reason) {}
     }
 }

@@ -24,6 +24,9 @@ import android.util.Pair;
 import android.util.Size;
 import android.view.Surface;
 
+import android.annotation.NonNull;
+import android.annotation.Nullable;
+
 import java.util.Map;
 import java.util.concurrent.Executor;
 
@@ -44,7 +47,7 @@ public interface CaptureProcessorImpl extends ProcessorImpl {
      *                process. The {@link Image} that are contained within the map will become
      *                invalid after this method completes, so no references to them should be kept.
      */
-    void process(Map<Integer, Pair<Image, TotalCaptureResult>> results);
+    void process(@NonNull Map<Integer, Pair<Image, TotalCaptureResult>> results);
 
     /**
      * Informs the CaptureProcessorImpl where it should write the postview output to.
@@ -54,7 +57,7 @@ public interface CaptureProcessorImpl extends ProcessorImpl {
      *                that the CaptureProcessorImpl should write data into.
      * @since 1.4
      */
-    void onPostviewOutputSurface(Surface surface);
+    void onPostviewOutputSurface(@NonNull Surface surface);
 
     /**
      * Invoked when the Camera Framework changes the configured output resolution for
@@ -67,7 +70,7 @@ public interface CaptureProcessorImpl extends ProcessorImpl {
      * @param postviewSize for the surface for postview.
      * @since 1.4
      */
-    void onResolutionUpdate(Size size, Size postviewSize);
+    void onResolutionUpdate(@NonNull Size size, @NonNull Size postviewSize);
 
     /**
      * Process a set images captured that were requested.
@@ -85,8 +88,8 @@ public interface CaptureProcessorImpl extends ProcessorImpl {
      *                       run on any arbitrary executor.
      * @since 1.3
      */
-    void process(Map<Integer, Pair<Image, TotalCaptureResult>> results,
-            ProcessResultImpl resultCallback, Executor executor);
+    void process(@NonNull Map<Integer, Pair<Image, TotalCaptureResult>> results,
+            @NonNull ProcessResultImpl resultCallback, @Nullable Executor executor);
 
     /**
      * Process a set images captured that were requested for both postview and
@@ -111,6 +114,6 @@ public interface CaptureProcessorImpl extends ProcessorImpl {
      * @throws RuntimeException   if postview feature is not supported
      * @since 1.4
      */
-    void processWithPostview(Map<Integer, Pair<Image, TotalCaptureResult>> results,
-            ProcessResultImpl resultCallback, Executor executor);
+    void processWithPostview(@NonNull Map<Integer, Pair<Image, TotalCaptureResult>> results,
+            @NonNull ProcessResultImpl resultCallback, @Nullable Executor executor);
 }

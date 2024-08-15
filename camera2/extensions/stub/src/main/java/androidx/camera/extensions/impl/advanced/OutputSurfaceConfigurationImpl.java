@@ -16,25 +16,45 @@
 
 package androidx.camera.extensions.impl.advanced;
 
-import android.annotation.SuppressLint;
 import android.hardware.camera2.params.ColorSpaceProfiles;
+
+import android.annotation.NonNull;
+import android.annotation.Nullable;
 
 /**
  * For specifying the output surface configurations for the extension.
  *
  * @since 1.4
  */
-@SuppressLint("UnknownNullness")
 public interface OutputSurfaceConfigurationImpl {
-    public OutputSurfaceImpl getPreviewOutputSurface();
+    /**
+     * gets the preview {@link OutputSurfaceImpl}, which may contain a <code>null</code> surface
+     * if the app doesn't specify the preview output surface.
+     */
+    @NonNull
+    OutputSurfaceImpl getPreviewOutputSurface();
 
-    public OutputSurfaceImpl getImageCaptureOutputSurface();
+    /**
+     * gets the still capture {@link OutputSurfaceImpl} which may contain a <code>null</code>
+     * surface if the app doesn't specify the still capture output surface.
+     */
+    @NonNull
+    OutputSurfaceImpl getImageCaptureOutputSurface();
 
-    public OutputSurfaceImpl getImageAnalysisOutputSurface();
+    /**
+     * gets the image analysis {@link OutputSurfaceImpl}.
+     */
+    @Nullable
+    OutputSurfaceImpl getImageAnalysisOutputSurface();
 
-    public OutputSurfaceImpl getPostviewOutputSurface();
+    /**
+     * gets the postview {@link OutputSurfaceImpl} which may contain a <code>null</code> surface
+     * if the app doesn't specify the postview output surface.
+     */
+    @Nullable
+    OutputSurfaceImpl getPostviewOutputSurface();
 
-    /*
+    /**
      * Gets the color space.
      *
      * @since 1.5
