@@ -25,8 +25,10 @@ import java.util.Map;
 import java.util.Set;
 
 import android.annotation.FlaggedApi;
+import android.graphics.ColorSpace;
 import android.graphics.ImageFormat;
 import android.hardware.camera2.CameraCharacteristics;
+import android.hardware.camera2.CameraCharacteristics.Key;
 import android.hardware.camera2.CameraExtensionCharacteristics;
 import android.hardware.camera2.CameraManager;
 import android.hardware.camera2.CameraMetadata;
@@ -38,6 +40,8 @@ import android.hardware.camera2.extension.AdvancedExtender;
 import android.hardware.camera2.extension.CameraExtensionService;
 import android.hardware.camera2.extension.CharacteristicsMap;
 import android.hardware.camera2.extension.SessionProcessor;
+import android.hardware.camera2.params.ColorSpaceProfiles;
+import android.hardware.camera2.params.DynamicRangeProfiles;
 import android.hardware.camera2.params.StreamConfiguration;
 import android.hardware.camera2.params.StreamConfigurationDuration;
 import android.hardware.camera2.params.StreamConfigurationMap;
@@ -50,7 +54,7 @@ import androidx.annotation.NonNull;
 
 import com.android.internal.camera.flags.Flags;
 
-@FlaggedApi(Flags.FLAG_CONCERT_MODE)
+@FlaggedApi(Flags.FLAG_CONCERT_MODE_API)
 public class EyesFreeVidService extends CameraExtensionService {
 
     private static final String TAG = "EyesFreeVidService";
@@ -60,7 +64,12 @@ public class EyesFreeVidService extends CameraExtensionService {
     private final Set<IBinder> mAttachedClients = new HashSet<>();
     CameraManager mCameraManager;
 
-    @FlaggedApi(Flags.FLAG_CONCERT_MODE)
+    protected static final Key REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES_MAP =
+            new Key<long[]>("android.request.availableDynamicRangeProfilesMap", long[].class);
+    protected static final Key REQUEST_AVAILABLE_COLOR_SPACE_PROFILES_MAP =
+            new Key<long[]>("android.request.availableColorSpaceProfilesMap", long[].class);
+
+    @FlaggedApi(Flags.FLAG_CONCERT_MODE_API)
     @Override
     public boolean onRegisterClient(IBinder token) {
         synchronized (mLock) {
@@ -72,7 +81,7 @@ public class EyesFreeVidService extends CameraExtensionService {
         }
     }
 
-    @FlaggedApi(Flags.FLAG_CONCERT_MODE)
+    @FlaggedApi(Flags.FLAG_CONCERT_MODE_API)
     @Override
     public void onUnregisterClient(IBinder token) {
         synchronized (mLock) {
@@ -80,7 +89,7 @@ public class EyesFreeVidService extends CameraExtensionService {
         }
     }
 
-    @FlaggedApi(Flags.FLAG_CONCERT_MODE)
+    @FlaggedApi(Flags.FLAG_CONCERT_MODE_API)
     @Override
     public AdvancedExtender onInitializeAdvancedExtension(int extensionType) {
         mCameraManager = getSystemService(CameraManager.class);
@@ -93,29 +102,29 @@ public class EyesFreeVidService extends CameraExtensionService {
         }
     }
 
-    @FlaggedApi(Flags.FLAG_CONCERT_MODE)
+    @FlaggedApi(Flags.FLAG_CONCERT_MODE_API)
     public static class AdvancedExtenderEyesFreeImpl extends AdvancedExtender {
         private CameraCharacteristics mCameraCharacteristics;
 
-        @FlaggedApi(Flags.FLAG_CONCERT_MODE)
+        @FlaggedApi(Flags.FLAG_CONCERT_MODE_API)
         public AdvancedExtenderEyesFreeImpl(@NonNull CameraManager cameraManager) {
             super(cameraManager);
         }
 
-        @FlaggedApi(Flags.FLAG_CONCERT_MODE)
+        @FlaggedApi(Flags.FLAG_CONCERT_MODE_API)
         @Override
         public boolean isExtensionAvailable(String cameraId,
                 CharacteristicsMap charsMap) {
             return true;
         }
 
-        @FlaggedApi(Flags.FLAG_CONCERT_MODE)
+        @FlaggedApi(Flags.FLAG_CONCERT_MODE_API)
         @Override
         public void initialize(String cameraId, CharacteristicsMap map) {
             mCameraCharacteristics = map.get(cameraId);
         }
 
-        @FlaggedApi(Flags.FLAG_CONCERT_MODE)
+        @FlaggedApi(Flags.FLAG_CONCERT_MODE_API)
         @Override
         public Map<Integer, List<Size>> getSupportedPreviewOutputResolutions(
                 String cameraId) {
@@ -144,21 +153,21 @@ public class EyesFreeVidService extends CameraExtensionService {
             return mCameraCharacteristics;
         }
 
-        @FlaggedApi(Flags.FLAG_CONCERT_MODE)
+        @FlaggedApi(Flags.FLAG_CONCERT_MODE_API)
         @Override
         public Map<Integer, List<Size>> getSupportedCaptureOutputResolutions(
                 String cameraId) {
             return filterOutputResolutions(Arrays.asList(ImageFormat.YUV_420_888,
-                    ImageFormat.JPEG));
+                    ImageFormat.JPEG, ImageFormat.JPEG_R, ImageFormat.YCBCR_P010));
         }
 
-        @FlaggedApi(Flags.FLAG_CONCERT_MODE)
+        @FlaggedApi(Flags.FLAG_CONCERT_MODE_API)
         @Override
         public SessionProcessor getSessionProcessor() {
             return new EyesFreeVidSessionProcessor(this);
         }
 
-        @FlaggedApi(Flags.FLAG_CONCERT_MODE)
+        @FlaggedApi(Flags.FLAG_CONCERT_MODE_API)
         @Override
         public List<CaptureRequest.Key> getAvailableCaptureRequestKeys(
                 String cameraId) {
@@ -174,7 +183,7 @@ public class EyesFreeVidService extends CameraExtensionService {
             return Arrays.asList(CAPTURE_REQUEST_SET);
         }
 
-        @FlaggedApi(Flags.FLAG_CONCERT_MODE)
+        @FlaggedApi(Flags.FLAG_CONCERT_MODE_API)
         @Override
         public List<CaptureResult.Key> getAvailableCaptureResultKeys(
                 String cameraId) {
@@ -272,6 +281,15 @@ public class EyesFreeVidService extends CameraExtensionService {
                     new StreamConfigurationDuration[tmpStallDurations.size()];
             filteredStallDurations = tmpStallDurations.toArray(filteredStallDurations);
 
+            long[] dynamicRangeProfileArray = new long[]{
+                    DynamicRangeProfiles.HLG10,
+                    DynamicRangeProfiles.HLG10 | DynamicRangeProfiles.STANDARD,
+                    0L};
+            long[] colorSpacesProfileArray = new long[]{
+                    ColorSpace.Named.BT2020_HLG.ordinal(),
+                    ImageFormat.YCBCR_P010,
+                    DynamicRangeProfiles.HLG10};
+
             return Arrays.asList(
                     Pair.create(CameraCharacteristics.SCALER_AVAILABLE_STREAM_CONFIGURATIONS,
                             filteredConfigurations),
@@ -293,33 +311,37 @@ public class EyesFreeVidService extends CameraExtensionService {
                                     .CONTROL_VIDEO_STABILIZATION_MODE_PREVIEW_STABILIZATION
                             }),
                     Pair.create(CameraExtensionCharacteristics.EFV_PADDING_ZOOM_FACTOR_RANGE,
-                            new Range<Float>(1.0f, 2.0f))
+                            new Range<Float>(1.0f, 2.0f)),
+                    Pair.create(REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES_MAP,
+                            dynamicRangeProfileArray),
+                    Pair.create(REQUEST_AVAILABLE_COLOR_SPACE_PROFILES_MAP,
+                            colorSpacesProfileArray)
             );
         }
     }
 
-    @FlaggedApi(Flags.FLAG_CONCERT_MODE)
+    @FlaggedApi(Flags.FLAG_CONCERT_MODE_API)
     public static class AdvancedExtenderImpl extends AdvancedExtender {
 
-        @FlaggedApi(Flags.FLAG_CONCERT_MODE)
+        @FlaggedApi(Flags.FLAG_CONCERT_MODE_API)
         public AdvancedExtenderImpl(@NonNull CameraManager cameraManager) {
             super(cameraManager);
         }
 
-        @FlaggedApi(Flags.FLAG_CONCERT_MODE)
+        @FlaggedApi(Flags.FLAG_CONCERT_MODE_API)
         @Override
         public boolean isExtensionAvailable(String cameraId,
                 CharacteristicsMap charsMap) {
             return false;
         }
 
-        @FlaggedApi(Flags.FLAG_CONCERT_MODE)
+        @FlaggedApi(Flags.FLAG_CONCERT_MODE_API)
         @Override
         public void initialize(String cameraId, CharacteristicsMap map) {
             throw new RuntimeException("Extension not supported");
         }
 
-        @FlaggedApi(Flags.FLAG_CONCERT_MODE)
+        @FlaggedApi(Flags.FLAG_CONCERT_MODE_API)
         @Override
         public Map<Integer, List<Size>> getSupportedPreviewOutputResolutions(
                 String cameraId) {
@@ -334,20 +356,20 @@ public class EyesFreeVidService extends CameraExtensionService {
             throw new RuntimeException("Extension not supported");
         }
 
-        @FlaggedApi(Flags.FLAG_CONCERT_MODE)
+        @FlaggedApi(Flags.FLAG_CONCERT_MODE_API)
         @Override
         public Map<Integer, List<Size>> getSupportedCaptureOutputResolutions(
                 String cameraId) {
             throw new RuntimeException("Extension not supported");
         }
 
-        @FlaggedApi(Flags.FLAG_CONCERT_MODE)
+        @FlaggedApi(Flags.FLAG_CONCERT_MODE_API)
         @Override
         public SessionProcessor getSessionProcessor() {
             throw new RuntimeException("Extension not supported");
         }
 
-        @FlaggedApi(Flags.FLAG_CONCERT_MODE)
+        @FlaggedApi(Flags.FLAG_CONCERT_MODE_API)
         @Override
         public List<CaptureRequest.Key> getAvailableCaptureRequestKeys(
                 String cameraId) {
@@ -355,7 +377,7 @@ public class EyesFreeVidService extends CameraExtensionService {
 
         }
 
-        @FlaggedApi(Flags.FLAG_CONCERT_MODE)
+        @FlaggedApi(Flags.FLAG_CONCERT_MODE_API)
         @Override
         public List<CaptureResult.Key> getAvailableCaptureResultKeys(
                 String cameraId) {
