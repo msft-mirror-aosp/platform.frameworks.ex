@@ -20,9 +20,7 @@ java_library {
     name: "androidx.camera.extensions.stub",
     installable: true,
 
-    static_libs: ["androidx.annotation_annotation"],
+    platform_apis: true,
 
     srcs: ["src/**/*.java"],
-
-    sdk_version: "current",
 }
