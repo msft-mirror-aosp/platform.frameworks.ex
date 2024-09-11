@@ -28,6 +28,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import android.annotation.FlaggedApi;
 import android.annotation.NonNull;
 import android.camera.extensions.impl.service.EyesFreeVidService.AdvancedExtenderEyesFreeImpl;
+import android.graphics.ImageFormat;
 import android.graphics.PointF;
 import android.graphics.Rect;
 import android.hardware.camera2.CameraAccessException;
@@ -61,7 +62,7 @@ import com.android.internal.camera.flags.Flags;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 
-@FlaggedApi(Flags.FLAG_CONCERT_MODE)
+@FlaggedApi(Flags.FLAG_CONCERT_MODE_API)
 public class EyesFreeVidSessionProcessor extends SessionProcessor {
 
     private static final String TAG = "EyesFreeVidSessionProcessor";
@@ -93,12 +94,12 @@ public class EyesFreeVidSessionProcessor extends SessionProcessor {
 
     protected AtomicBoolean mOnCaptureSessionEndStarted = new AtomicBoolean(false);
 
-    @FlaggedApi(Flags.FLAG_CONCERT_MODE)
+    @FlaggedApi(Flags.FLAG_CONCERT_MODE_API)
     protected EyesFreeVidSessionProcessor(AdvancedExtenderEyesFreeImpl advancedExtender) {
         mAdvancedExtender = advancedExtender;
     }
 
-    @FlaggedApi(Flags.FLAG_CONCERT_MODE)
+    @FlaggedApi(Flags.FLAG_CONCERT_MODE_API)
     public ExtensionConfiguration initSession(@NonNull IBinder token,
             @NonNull String cameraId, @NonNull CharacteristicsMap map,
             @NonNull CameraOutputSurface previewSurface,
@@ -126,9 +127,10 @@ public class EyesFreeVidSessionProcessor extends SessionProcessor {
                     previewSurface.getSize().getHeight(), previewSurface.getImageFormat(),
                     MAX_NUM_IMAGES, SurfaceUtils.getSurfaceUsage(previewSurface.getSurface()));
 
-            List<CameraOutputSurface> previewList = new ArrayList<>(List.of(
-                    new CameraOutputSurface(mPreviewImageReader.getSurface(),
-                    previewSurface.getSize())));
+            CameraOutputSurface previewOutputSurface = new CameraOutputSurface(
+                    mPreviewImageReader.getSurface(), previewSurface.getSize());
+            previewOutputSurface.setDynamicRangeProfile(previewSurface.getDynamicRangeProfile());
+            List<CameraOutputSurface> previewList = new ArrayList<>(List.of(previewOutputSurface));
 
             ExtensionOutputConfiguration previewConfig = new ExtensionOutputConfiguration(
                     previewList, PREVIEW_OUTPUT_ID, null, -1);
@@ -138,10 +140,15 @@ public class EyesFreeVidSessionProcessor extends SessionProcessor {
         ExtensionConfiguration res = new ExtensionConfiguration(0 /*session type*/,
                 CameraDevice.TEMPLATE_PREVIEW, outputs, null);
 
+        if (imageCaptureSurface != null
+                && imageCaptureSurface.getImageFormat() == ImageFormat.YCBCR_P010) {
+            res.setColorSpace(imageCaptureSurface.getColorSpace());
+        }
+
         return res;
     }
 
-    @FlaggedApi(Flags.FLAG_CONCERT_MODE)
+    @FlaggedApi(Flags.FLAG_CONCERT_MODE_API)
     @Override
     public void deInitSession(@NonNull IBinder token) {
         if (mPreviewImageReader != null) {
@@ -163,7 +170,7 @@ public class EyesFreeVidSessionProcessor extends SessionProcessor {
         }
     }
 
-    @FlaggedApi(Flags.FLAG_CONCERT_MODE)
+    @FlaggedApi(Flags.FLAG_CONCERT_MODE_API)
     @Override
     public void onCaptureSessionStart(@NonNull RequestProcessor requestProcessor,
             @NonNull String statsKey) {
@@ -188,7 +195,7 @@ public class EyesFreeVidSessionProcessor extends SessionProcessor {
         mPreviewImageReader.setOnImageAvailableListener(new ImageListener(), mHandler);
     }
 
-    @FlaggedApi(Flags.FLAG_CONCERT_MODE)
+    @FlaggedApi(Flags.FLAG_CONCERT_MODE_API)
     @Override
     public void onCaptureSessionEnd() {
         mOnCaptureSessionEndStarted.set(true);
@@ -200,7 +207,7 @@ public class EyesFreeVidSessionProcessor extends SessionProcessor {
         mRequestProcessor = null;
     }
 
-    @FlaggedApi(Flags.FLAG_CONCERT_MODE)
+    @FlaggedApi(Flags.FLAG_CONCERT_MODE_API)
     @Override
     public int startRepeating(@NonNull Executor executor,
             @NonNull CaptureCallback captureCallback) {
@@ -375,13 +382,13 @@ public class EyesFreeVidSessionProcessor extends SessionProcessor {
         return mParametersList;
     }
 
-    @FlaggedApi(Flags.FLAG_CONCERT_MODE)
+    @FlaggedApi(Flags.FLAG_CONCERT_MODE_API)
     @Override
     public void stopRepeating() {
         mRequestProcessor.stopRepeating();
     }
 
-    @FlaggedApi(Flags.FLAG_CONCERT_MODE)
+    @FlaggedApi(Flags.FLAG_CONCERT_MODE_API)
     @Override
     public int startMultiFrameCapture(@NonNull Executor executor,
             @NonNull CaptureCallback captureCallback) {
@@ -446,7 +453,7 @@ public class EyesFreeVidSessionProcessor extends SessionProcessor {
         return seqId;
     }
 
-    @FlaggedApi(Flags.FLAG_CONCERT_MODE)
+    @FlaggedApi(Flags.FLAG_CONCERT_MODE_API)
     @Override
     public int startTrigger(@NonNull CaptureRequest captureRequest,
             @NonNull Executor executor, @NonNull CaptureCallback captureCallback) {
@@ -526,7 +533,7 @@ public class EyesFreeVidSessionProcessor extends SessionProcessor {
         return parameters;
     }
 
-    @FlaggedApi(Flags.FLAG_CONCERT_MODE)
+    @FlaggedApi(Flags.FLAG_CONCERT_MODE_API)
     @Override
     public void setParameters(@NonNull CaptureRequest captureRequest) {
         synchronized (mParametersLock) {
