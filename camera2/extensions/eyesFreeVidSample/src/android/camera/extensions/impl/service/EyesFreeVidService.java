@@ -34,8 +34,6 @@ import android.hardware.camera2.CameraManager;
 import android.hardware.camera2.CameraMetadata;
 import android.hardware.camera2.CaptureRequest;
 import android.hardware.camera2.CaptureResult;
-import android.hardware.camera2.ExtensionCaptureRequest;
-import android.hardware.camera2.ExtensionCaptureResult;
 import android.hardware.camera2.extension.AdvancedExtender;
 import android.hardware.camera2.extension.CameraExtensionService;
 import android.hardware.camera2.extension.CharacteristicsMap;
@@ -54,7 +52,6 @@ import androidx.annotation.NonNull;
 
 import com.android.internal.camera.flags.Flags;
 
-@FlaggedApi(Flags.FLAG_CONCERT_MODE_API)
 public class EyesFreeVidService extends CameraExtensionService {
 
     private static final String TAG = "EyesFreeVidService";
@@ -69,7 +66,6 @@ public class EyesFreeVidService extends CameraExtensionService {
     protected static final Key REQUEST_AVAILABLE_COLOR_SPACE_PROFILES_MAP =
             new Key<long[]>("android.request.availableColorSpaceProfilesMap", long[].class);
 
-    @FlaggedApi(Flags.FLAG_CONCERT_MODE_API)
     @Override
     public boolean onRegisterClient(IBinder token) {
         synchronized (mLock) {
@@ -81,7 +77,6 @@ public class EyesFreeVidService extends CameraExtensionService {
         }
     }
 
-    @FlaggedApi(Flags.FLAG_CONCERT_MODE_API)
     @Override
     public void onUnregisterClient(IBinder token) {
         synchronized (mLock) {
@@ -89,42 +84,36 @@ public class EyesFreeVidService extends CameraExtensionService {
         }
     }
 
-    @FlaggedApi(Flags.FLAG_CONCERT_MODE_API)
     @Override
     public AdvancedExtender onInitializeAdvancedExtension(int extensionType) {
         mCameraManager = getSystemService(CameraManager.class);
 
         switch (extensionType) {
-            case CameraExtensionCharacteristics.EXTENSION_EYES_FREE_VIDEOGRAPHY:
+            case CameraExtensionCharacteristics.EXTENSION_FACE_RETOUCH:
                 return new AdvancedExtenderEyesFreeImpl(mCameraManager);
             default:
                 return new AdvancedExtenderImpl(mCameraManager);
         }
     }
 
-    @FlaggedApi(Flags.FLAG_CONCERT_MODE_API)
     public static class AdvancedExtenderEyesFreeImpl extends AdvancedExtender {
         private CameraCharacteristics mCameraCharacteristics;
 
-        @FlaggedApi(Flags.FLAG_CONCERT_MODE_API)
         public AdvancedExtenderEyesFreeImpl(@NonNull CameraManager cameraManager) {
             super(cameraManager);
         }
 
-        @FlaggedApi(Flags.FLAG_CONCERT_MODE_API)
         @Override
         public boolean isExtensionAvailable(String cameraId,
                 CharacteristicsMap charsMap) {
             return true;
         }
 
-        @FlaggedApi(Flags.FLAG_CONCERT_MODE_API)
         @Override
         public void initialize(String cameraId, CharacteristicsMap map) {
             mCameraCharacteristics = map.get(cameraId);
         }
 
-        @FlaggedApi(Flags.FLAG_CONCERT_MODE_API)
         @Override
         public Map<Integer, List<Size>> getSupportedPreviewOutputResolutions(
                 String cameraId) {
@@ -153,7 +142,6 @@ public class EyesFreeVidService extends CameraExtensionService {
             return mCameraCharacteristics;
         }
 
-        @FlaggedApi(Flags.FLAG_CONCERT_MODE_API)
         @Override
         public Map<Integer, List<Size>> getSupportedCaptureOutputResolutions(
                 String cameraId) {
@@ -161,45 +149,29 @@ public class EyesFreeVidService extends CameraExtensionService {
                     ImageFormat.JPEG, ImageFormat.JPEG_R, ImageFormat.YCBCR_P010));
         }
 
-        @FlaggedApi(Flags.FLAG_CONCERT_MODE_API)
         @Override
         public SessionProcessor getSessionProcessor() {
             return new EyesFreeVidSessionProcessor(this);
         }
 
-        @FlaggedApi(Flags.FLAG_CONCERT_MODE_API)
         @Override
         public List<CaptureRequest.Key> getAvailableCaptureRequestKeys(
                 String cameraId) {
             final CaptureRequest.Key [] CAPTURE_REQUEST_SET = {CaptureRequest.CONTROL_ZOOM_RATIO,
                 CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_REGIONS,
                 CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.JPEG_QUALITY,
-                CaptureRequest.JPEG_ORIENTATION, ExtensionCaptureRequest.EFV_PADDING_ZOOM_FACTOR,
-                ExtensionCaptureRequest.EFV_AUTO_ZOOM,
-                ExtensionCaptureRequest.EFV_MAX_PADDING_ZOOM_FACTOR,
-                ExtensionCaptureRequest.EFV_STABILIZATION_MODE,
-                ExtensionCaptureRequest.EFV_TRANSLATE_VIEWPORT,
-                ExtensionCaptureRequest.EFV_ROTATE_VIEWPORT};
+                CaptureRequest.JPEG_ORIENTATION
+            };
             return Arrays.asList(CAPTURE_REQUEST_SET);
         }
 
-        @FlaggedApi(Flags.FLAG_CONCERT_MODE_API)
         @Override
         public List<CaptureResult.Key> getAvailableCaptureResultKeys(
                 String cameraId) {
             final CaptureResult.Key [] CAPTURE_RESULT_SET = {CaptureResult.CONTROL_ZOOM_RATIO,
                 CaptureResult.CONTROL_AF_MODE, CaptureResult.CONTROL_AF_REGIONS,
                 CaptureResult.CONTROL_AF_TRIGGER, CaptureResult.CONTROL_AF_STATE,
-                CaptureResult.JPEG_QUALITY, CaptureResult.JPEG_ORIENTATION,
-                ExtensionCaptureResult.EFV_PADDING_REGION,
-                ExtensionCaptureResult.EFV_AUTO_ZOOM,
-                ExtensionCaptureResult.EFV_MAX_PADDING_ZOOM_FACTOR,
-                ExtensionCaptureResult.EFV_AUTO_ZOOM_PADDING_REGION,
-                ExtensionCaptureResult.EFV_STABILIZATION_MODE,
-                ExtensionCaptureResult.EFV_TARGET_COORDINATES,
-                ExtensionCaptureResult.EFV_PADDING_ZOOM_FACTOR,
-                ExtensionCaptureResult.EFV_TRANSLATE_VIEWPORT,
-                ExtensionCaptureResult.EFV_ROTATE_VIEWPORT
+                CaptureResult.JPEG_QUALITY, CaptureResult.JPEG_ORIENTATION
             };
             return Arrays.asList(CAPTURE_RESULT_SET);
         }
@@ -310,8 +282,6 @@ public class EyesFreeVidService extends CameraExtensionService {
                             new int[]{ CameraCharacteristics
                                     .CONTROL_VIDEO_STABILIZATION_MODE_PREVIEW_STABILIZATION
                             }),
-                    Pair.create(CameraExtensionCharacteristics.EFV_PADDING_ZOOM_FACTOR_RANGE,
-                            new Range<Float>(1.0f, 2.0f)),
                     Pair.create(REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES_MAP,
                             dynamicRangeProfileArray),
                     Pair.create(REQUEST_AVAILABLE_COLOR_SPACE_PROFILES_MAP,
@@ -320,28 +290,23 @@ public class EyesFreeVidService extends CameraExtensionService {
         }
     }
 
-    @FlaggedApi(Flags.FLAG_CONCERT_MODE_API)
     public static class AdvancedExtenderImpl extends AdvancedExtender {
 
-        @FlaggedApi(Flags.FLAG_CONCERT_MODE_API)
         public AdvancedExtenderImpl(@NonNull CameraManager cameraManager) {
             super(cameraManager);
         }
 
-        @FlaggedApi(Flags.FLAG_CONCERT_MODE_API)
         @Override
         public boolean isExtensionAvailable(String cameraId,
                 CharacteristicsMap charsMap) {
             return false;
         }
 
-        @FlaggedApi(Flags.FLAG_CONCERT_MODE_API)
         @Override
         public void initialize(String cameraId, CharacteristicsMap map) {
             throw new RuntimeException("Extension not supported");
         }
 
-        @FlaggedApi(Flags.FLAG_CONCERT_MODE_API)
         @Override
         public Map<Integer, List<Size>> getSupportedPreviewOutputResolutions(
                 String cameraId) {
@@ -356,20 +321,17 @@ public class EyesFreeVidService extends CameraExtensionService {
             throw new RuntimeException("Extension not supported");
         }
 
-        @FlaggedApi(Flags.FLAG_CONCERT_MODE_API)
         @Override
         public Map<Integer, List<Size>> getSupportedCaptureOutputResolutions(
                 String cameraId) {
             throw new RuntimeException("Extension not supported");
         }
 
-        @FlaggedApi(Flags.FLAG_CONCERT_MODE_API)
         @Override
         public SessionProcessor getSessionProcessor() {
             throw new RuntimeException("Extension not supported");
         }
 
-        @FlaggedApi(Flags.FLAG_CONCERT_MODE_API)
         @Override
         public List<CaptureRequest.Key> getAvailableCaptureRequestKeys(
                 String cameraId) {
@@ -377,7 +339,6 @@ public class EyesFreeVidService extends CameraExtensionService {
 
         }
 
-        @FlaggedApi(Flags.FLAG_CONCERT_MODE_API)
         @Override
         public List<CaptureResult.Key> getAvailableCaptureResultKeys(
                 String cameraId) {
