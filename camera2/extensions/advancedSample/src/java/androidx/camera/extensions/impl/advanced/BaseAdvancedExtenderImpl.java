@@ -127,7 +127,7 @@ public abstract class BaseAdvancedExtenderImpl implements AdvancedExtenderImpl {
     @Override
     public Map<Integer, List<Size>> getSupportedCaptureOutputResolutions(String cameraId) {
         return filterOutputResolutions(Arrays.asList(ImageFormat.JPEG, ImageFormat.YUV_420_888,
-                ImageFormat.JPEG_R, ImageFormat.YCBCR_P010));
+                ImageFormat.DEPTH_JPEG, ImageFormat.JPEG_R, ImageFormat.YCBCR_P010));
     }
 
     @Override
@@ -223,8 +223,9 @@ public abstract class BaseAdvancedExtenderImpl implements AdvancedExtenderImpl {
             // Image Capture
             if (mCaptureOutputSurfaceConfig.getSurface() != null) {
 
-                // For this sample, JPEG_R or YCBCR_P010 will not be processed
-                if (isJpegR(mCaptureOutputSurfaceConfig)) {
+                // For this sample, DEPTH_JPEG, JPEG_R or YCBCR_P010 will not be processed
+                if (isJpegR(mCaptureOutputSurfaceConfig) ||
+                        isDepthJpeg(mCaptureOutputSurfaceConfig)) {
                     Camera2OutputConfigImplBuilder captureOutputConfigBuilder;
 
                     captureOutputConfigBuilder =
@@ -351,6 +352,14 @@ public abstract class BaseAdvancedExtenderImpl implements AdvancedExtenderImpl {
             return ((surfaceConfig.getImageFormat() == JpegEncoder.HAL_PIXEL_FORMAT_BLOB) &&
                     (surfaceConfig.getDataspace() == DataSpace.DATASPACE_JPEG_R)) ||
                     (surfaceConfig.getImageFormat() == ImageFormat.JPEG_R);
+        }
+
+        protected boolean isDepthJpeg(OutputSurfaceImpl surfaceConfig) {
+            // The surface configuration format for DepthJpeg can be specified in either format.
+            // Camera2 uses HAL_PIXEL_FORMAT_BLOB and CameraX uses ImageFormat.DEPTH_JPEG.
+            return ((surfaceConfig.getImageFormat() == JpegEncoder.HAL_PIXEL_FORMAT_BLOB) &&
+                    (surfaceConfig.getDataspace() == DataSpace.DATASPACE_DYNAMIC_DEPTH)) ||
+                    (surfaceConfig.getImageFormat() == ImageFormat.DEPTH_JPEG);
         }
 
         protected boolean isJpeg(OutputSurfaceImpl surfaceConfig) {
