@@ -24,6 +24,5 @@ cc_library_shared {
     srcs: [
         "BitmapDecoderJNI.cpp",
     ],
-    sdk_version: "8",
     product_specific: true,
 }
