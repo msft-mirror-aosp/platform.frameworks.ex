@@ -28,6 +28,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import android.annotation.FlaggedApi;
 import android.annotation.NonNull;
 import android.camera.extensions.impl.service.EyesFreeVidService.AdvancedExtenderEyesFreeImpl;
+import android.graphics.ImageFormat;
 import android.graphics.PointF;
 import android.graphics.Rect;
 import android.hardware.camera2.CameraAccessException;
@@ -36,8 +37,6 @@ import android.hardware.camera2.CameraDevice;
 import android.hardware.camera2.CaptureFailure;
 import android.hardware.camera2.CaptureRequest;
 import android.hardware.camera2.CaptureResult;
-import android.hardware.camera2.ExtensionCaptureRequest;
-import android.hardware.camera2.ExtensionCaptureResult;
 import android.hardware.camera2.TotalCaptureResult;
 import android.hardware.camera2.extension.CameraOutputSurface;
 import android.hardware.camera2.extension.CharacteristicsMap;
@@ -57,11 +56,9 @@ import android.util.Log;
 import android.util.Pair;
 import androidx.annotation.GuardedBy;
 
-import com.android.internal.camera.flags.Flags;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 
-@FlaggedApi(Flags.FLAG_CONCERT_MODE)
 public class EyesFreeVidSessionProcessor extends SessionProcessor {
 
     private static final String TAG = "EyesFreeVidSessionProcessor";
@@ -93,12 +90,10 @@ public class EyesFreeVidSessionProcessor extends SessionProcessor {
 
     protected AtomicBoolean mOnCaptureSessionEndStarted = new AtomicBoolean(false);
 
-    @FlaggedApi(Flags.FLAG_CONCERT_MODE)
     protected EyesFreeVidSessionProcessor(AdvancedExtenderEyesFreeImpl advancedExtender) {
         mAdvancedExtender = advancedExtender;
     }
 
-    @FlaggedApi(Flags.FLAG_CONCERT_MODE)
     public ExtensionConfiguration initSession(@NonNull IBinder token,
             @NonNull String cameraId, @NonNull CharacteristicsMap map,
             @NonNull CameraOutputSurface previewSurface,
@@ -126,9 +121,10 @@ public class EyesFreeVidSessionProcessor extends SessionProcessor {
                     previewSurface.getSize().getHeight(), previewSurface.getImageFormat(),
                     MAX_NUM_IMAGES, SurfaceUtils.getSurfaceUsage(previewSurface.getSurface()));
 
-            List<CameraOutputSurface> previewList = new ArrayList<>(List.of(
-                    new CameraOutputSurface(mPreviewImageReader.getSurface(),
-                    previewSurface.getSize())));
+            CameraOutputSurface previewOutputSurface = new CameraOutputSurface(
+                    mPreviewImageReader.getSurface(), previewSurface.getSize());
+            previewOutputSurface.setDynamicRangeProfile(previewSurface.getDynamicRangeProfile());
+            List<CameraOutputSurface> previewList = new ArrayList<>(List.of(previewOutputSurface));
 
             ExtensionOutputConfiguration previewConfig = new ExtensionOutputConfiguration(
                     previewList, PREVIEW_OUTPUT_ID, null, -1);
@@ -138,10 +134,14 @@ public class EyesFreeVidSessionProcessor extends SessionProcessor {
         ExtensionConfiguration res = new ExtensionConfiguration(0 /*session type*/,
                 CameraDevice.TEMPLATE_PREVIEW, outputs, null);
 
+        if (imageCaptureSurface != null
+                && imageCaptureSurface.getImageFormat() == ImageFormat.YCBCR_P010) {
+            res.setColorSpace(imageCaptureSurface.getColorSpace());
+        }
+
         return res;
     }
 
-    @FlaggedApi(Flags.FLAG_CONCERT_MODE)
     @Override
     public void deInitSession(@NonNull IBinder token) {
         if (mPreviewImageReader != null) {
@@ -163,7 +163,6 @@ public class EyesFreeVidSessionProcessor extends SessionProcessor {
         }
     }
 
-    @FlaggedApi(Flags.FLAG_CONCERT_MODE)
     @Override
     public void onCaptureSessionStart(@NonNull RequestProcessor requestProcessor,
             @NonNull String statsKey) {
@@ -188,7 +187,6 @@ public class EyesFreeVidSessionProcessor extends SessionProcessor {
         mPreviewImageReader.setOnImageAvailableListener(new ImageListener(), mHandler);
     }
 
-    @FlaggedApi(Flags.FLAG_CONCERT_MODE)
     @Override
     public void onCaptureSessionEnd() {
         mOnCaptureSessionEndStarted.set(true);
@@ -200,7 +198,6 @@ public class EyesFreeVidSessionProcessor extends SessionProcessor {
         mRequestProcessor = null;
     }
 
-    @FlaggedApi(Flags.FLAG_CONCERT_MODE)
     @Override
     public int startRepeating(@NonNull Executor executor,
             @NonNull CaptureCallback captureCallback) {
@@ -294,67 +291,6 @@ public class EyesFreeVidSessionProcessor extends SessionProcessor {
                 }
             }
 
-            synchronized (mParametersLock) {
-                List<Pair<CaptureRequest.Key, Object>> requestParameters = request.getParameters();
-                boolean autoZoomEnabled = false;
-                boolean stabilizationModeLocked = false;
-                for (Pair<CaptureRequest.Key, Object> parameter : requestParameters) {
-                    if (ExtensionCaptureRequest.EFV_AUTO_ZOOM.equals(parameter.first)) {
-                        captureResults.put(ExtensionCaptureResult.EFV_AUTO_ZOOM,
-                                (boolean) parameter.second);
-                        autoZoomEnabled = (boolean) parameter.second;
-                        if (autoZoomEnabled &&
-                                ExtensionCaptureRequest.EFV_MAX_PADDING_ZOOM_FACTOR.equals(
-                                parameter.first)) {
-                            captureResults.put(
-                                    ExtensionCaptureResult.EFV_MAX_PADDING_ZOOM_FACTOR,
-                                    (Float) parameter.second);
-                        }
-                    }
-                    if (ExtensionCaptureRequest.EFV_PADDING_ZOOM_FACTOR.equals(parameter.first)) {
-                        captureResults.put(ExtensionCaptureResult.EFV_PADDING_ZOOM_FACTOR,
-                                (Float) parameter.second);
-                    }
-                    if (ExtensionCaptureRequest.EFV_TRANSLATE_VIEWPORT.equals(parameter.first)) {
-                        captureResults.put(ExtensionCaptureResult.EFV_TRANSLATE_VIEWPORT,
-                                (Pair<Integer, Integer>) parameter.second);
-                    }
-                    if (ExtensionCaptureRequest.EFV_ROTATE_VIEWPORT.equals(parameter.first)) {
-                        captureResults.put(ExtensionCaptureResult.EFV_ROTATE_VIEWPORT,
-                                (Float) parameter.second);
-                    }
-                    if (ExtensionCaptureRequest.EFV_STABILIZATION_MODE.equals(parameter.first)) {
-                        if (ExtensionCaptureRequest.EFV_STABILIZATION_MODE_LOCKED ==
-                                (int) parameter.second) {
-                            stabilizationModeLocked = true;
-                            int[] samplePaddingRegion = {5, 5, 5, 5};
-                            captureResults.put(ExtensionCaptureResult.EFV_PADDING_REGION,
-                                    samplePaddingRegion);
-                            CameraCharacteristics cameraCharacteristics =
-                                    mAdvancedExtender.getCameraCharacteristics();
-                            Rect arraySize = cameraCharacteristics.get(
-                                    CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE);
-                            int centerX = arraySize.width() / 2;
-                            int centerY = arraySize.height() / 2;
-                            int squareSize = 5;
-                            PointF[] sampleTargetCoordinates = new PointF[]{
-                                    new PointF(centerX - squareSize, centerY - squareSize),
-                                    new PointF(centerX + squareSize, centerY - squareSize),
-                                    new PointF(centerX + squareSize, centerY + squareSize),
-                                    new PointF(centerX - squareSize, centerY + squareSize)
-                            };
-                            captureResults.put(ExtensionCaptureResult.EFV_TARGET_COORDINATES,
-                                    sampleTargetCoordinates);
-                        }
-                    }
-                }
-
-                if (autoZoomEnabled && stabilizationModeLocked) {
-                    int[] sampleAutoZoomPaddingRegion = {3, 3, 3, 3};
-                    captureResults.put(ExtensionCaptureResult.EFV_AUTO_ZOOM_PADDING_REGION,
-                            sampleAutoZoomPaddingRegion);
-                }
-            }
 
             captureCallback.onCaptureCompleted(shutterTimestamp, seqId, captureResults);
         }
@@ -375,13 +311,11 @@ public class EyesFreeVidSessionProcessor extends SessionProcessor {
         return mParametersList;
     }
 
-    @FlaggedApi(Flags.FLAG_CONCERT_MODE)
     @Override
     public void stopRepeating() {
         mRequestProcessor.stopRepeating();
     }
 
-    @FlaggedApi(Flags.FLAG_CONCERT_MODE)
     @Override
     public int startMultiFrameCapture(@NonNull Executor executor,
             @NonNull CaptureCallback captureCallback) {
@@ -446,7 +380,6 @@ public class EyesFreeVidSessionProcessor extends SessionProcessor {
         return seqId;
     }
 
-    @FlaggedApi(Flags.FLAG_CONCERT_MODE)
     @Override
     public int startTrigger(@NonNull CaptureRequest captureRequest,
             @NonNull Executor executor, @NonNull CaptureCallback captureCallback) {
@@ -526,7 +459,6 @@ public class EyesFreeVidSessionProcessor extends SessionProcessor {
         return parameters;
     }
 
-    @FlaggedApi(Flags.FLAG_CONCERT_MODE)
     @Override
     public void setParameters(@NonNull CaptureRequest captureRequest) {
         synchronized (mParametersLock) {

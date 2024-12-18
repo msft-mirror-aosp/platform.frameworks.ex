@@ -16,26 +16,32 @@
 
 package androidx.camera.extensions.impl.advanced;
 
-import android.annotation.SuppressLint;
 import android.hardware.camera2.CaptureRequest;
+import android.hardware.camera2.params.ColorSpaceProfiles;
+import android.hardware.camera2.params.SessionConfiguration;
+
+import android.annotation.NonNull;
 
 import java.util.List;
 import java.util.Map;
 
 /**
  * A config representing a {@link android.hardware.camera2.params.SessionConfiguration}
+ *
+ * @since 1.2
  */
-@SuppressLint("UnknownNullness")
 public interface Camera2SessionConfigImpl {
     /**
      * Returns all the {@link Camera2OutputConfigImpl}s that will be used to create
      * {@link android.hardware.camera2.params.OutputConfiguration}.
      */
+    @NonNull
     List<Camera2OutputConfigImpl> getOutputConfigs();
 
     /**
      * Gets all the parameters to create the session parameters with.
      */
+    @NonNull
     Map<CaptureRequest.Key<?>, Object> getSessionParameters();
 
     /**
@@ -49,10 +55,23 @@ public interface Camera2SessionConfigImpl {
      * Retrieves the session type to be used when initializing the
      * {@link android.hardware.camera2.CameraCaptureSession}.
      *
-     * @since 1.4
      * @return Camera capture session type. Regular and vendor specific types are supported but
      * not high speed values. The extension can return -1 in which case the camera capture session
      * will be configured to use the default regular type.
+     *
+     * @since 1.4
      */
-    int getSessionType();
+    default int getSessionType() {
+        return SessionConfiguration.SESSION_REGULAR;
+    }
+
+    /**
+     * Gets the color space.
+     *
+     * @since 1.5
+     * @return {@link android.graphics.ColorSpace.Named} set for session configuration
+     */
+    default int getColorSpace() {
+        return ColorSpaceProfiles.UNSPECIFIED;
+    }
 }

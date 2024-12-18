@@ -16,11 +16,12 @@
 
 package androidx.camera.extensions.impl.advanced;
 
-
-import android.annotation.SuppressLint;
 import android.hardware.camera2.CameraDevice;
 import android.hardware.camera2.CaptureRequest;
+import android.hardware.camera2.params.ColorSpaceProfiles;
 import android.hardware.camera2.params.SessionConfiguration;
+
+import android.annotation.NonNull;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -30,9 +31,9 @@ import java.util.Map;
 /**
  * A builder implementation to help OEM build the {@link Camera2SessionConfigImpl} instance.
  */
-@SuppressLint("UnknownNullness")
 public class Camera2SessionConfigImplBuilder {
     private int mSessionTemplateId = CameraDevice.TEMPLATE_PREVIEW;
+    private int mColorSpace = ColorSpaceProfiles.UNSPECIFIED;
     private int mSessionType = SessionConfiguration.SESSION_REGULAR;
     Map<CaptureRequest.Key<?>, Object> mSessionParameters = new HashMap<>();
     List<Camera2OutputConfigImpl> mCamera2OutputConfigs = new ArrayList<>();
@@ -43,8 +44,9 @@ public class Camera2SessionConfigImplBuilder {
     /**
      * Adds a output config.
      */
+    @NonNull
     public Camera2SessionConfigImplBuilder addOutputConfig(
-            Camera2OutputConfigImpl outputConfig) {
+            @NonNull Camera2OutputConfigImpl outputConfig) {
         mCamera2OutputConfigs.add(outputConfig);
         return this;
     }
@@ -52,8 +54,9 @@ public class Camera2SessionConfigImplBuilder {
     /**
      * Sets session parameters.
      */
+    @NonNull
     public <T> Camera2SessionConfigImplBuilder addSessionParameter(
-            CaptureRequest.Key<T> key, T value) {
+            @NonNull CaptureRequest.Key<T> key, @NonNull T value) {
         mSessionParameters.put(key, value);
         return this;
     }
@@ -61,9 +64,35 @@ public class Camera2SessionConfigImplBuilder {
     /**
      * Sets the template id for session parameters request.
      */
+    @NonNull
     public Camera2SessionConfigImplBuilder setSessionTemplateId(int templateId) {
         mSessionTemplateId = templateId;
         return this;
+    }
+
+    /**
+     * Sets the session type for the session.
+     */
+    @NonNull
+    public Camera2SessionConfigImplBuilder setSessionType(int sessionType) {
+        mSessionType = sessionType;
+        return this;
+    }
+
+    /**
+     * Sets the color space.
+     */
+    @NonNull
+    public Camera2SessionConfigImplBuilder setColorSpace(int colorSpace) {
+        mColorSpace = colorSpace;
+        return this;
+    }
+
+    /**
+     * Gets the color space.
+     */
+    public int getColorSpace() {
+        return mColorSpace;
     }
 
     /**
@@ -76,6 +105,7 @@ public class Camera2SessionConfigImplBuilder {
     /**
      * Gets the session parameters.
      */
+    @NonNull
     public Map<CaptureRequest.Key<?>, Object> getSessionParameters() {
         return mSessionParameters;
     }
@@ -83,6 +113,7 @@ public class Camera2SessionConfigImplBuilder {
     /**
      * Gets all the output configs.
      */
+    @NonNull
     public List<Camera2OutputConfigImpl> getCamera2OutputConfigs() {
         return mCamera2OutputConfigs;
     }
@@ -97,30 +128,35 @@ public class Camera2SessionConfigImplBuilder {
     /**
      * Builds a {@link Camera2SessionConfigImpl} instance.
      */
+    @NonNull
     public Camera2SessionConfigImpl build() {
         return new Camera2SessionConfigImplImpl(this);
     }
 
     private static class Camera2SessionConfigImplImpl implements
             Camera2SessionConfigImpl {
-        int mSessionTemplateId;
-        int mSessionType;
-        Map<CaptureRequest.Key<?>, Object> mSessionParameters;
-        List<Camera2OutputConfigImpl> mCamera2OutputConfigs;
+        private final int mSessionTemplateId;
+        private final int mSessionType;
+        private final int mColorSpace;
+        private final Map<CaptureRequest.Key<?>, Object> mSessionParameters;
+        private final List<Camera2OutputConfigImpl> mCamera2OutputConfigs;
 
-        Camera2SessionConfigImplImpl(Camera2SessionConfigImplBuilder builder) {
+        Camera2SessionConfigImplImpl(@NonNull Camera2SessionConfigImplBuilder builder) {
             mSessionTemplateId = builder.getSessionTemplateId();
-            mSessionParameters = builder.getSessionParameters();
-            mCamera2OutputConfigs = builder.getCamera2OutputConfigs();
+            mSessionParameters = new HashMap<>(builder.getSessionParameters());
+            mColorSpace = builder.getColorSpace();
+            mCamera2OutputConfigs = new ArrayList<>(builder.getCamera2OutputConfigs());
             mSessionType = builder.getSessionType();
         }
 
         @Override
+        @NonNull
         public List<Camera2OutputConfigImpl> getOutputConfigs() {
             return mCamera2OutputConfigs;
         }
 
         @Override
+        @NonNull
         public Map<CaptureRequest.Key<?>, Object> getSessionParameters() {
             return mSessionParameters;
         }
@@ -133,6 +169,11 @@ public class Camera2SessionConfigImplBuilder {
         @Override
         public int getSessionType() {
             return mSessionType;
+        }
+
+        @Override
+        public int getColorSpace() {
+            return mColorSpace;
         }
     }
 }
