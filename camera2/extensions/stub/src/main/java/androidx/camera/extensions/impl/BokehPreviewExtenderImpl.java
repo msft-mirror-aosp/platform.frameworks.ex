@@ -20,8 +20,8 @@ import android.hardware.camera2.CameraCharacteristics;
 import android.util.Pair;
 import android.util.Size;
 
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
+import android.annotation.NonNull;
+import android.annotation.Nullable;
 
 import java.util.List;
 
@@ -42,28 +42,33 @@ public final class BokehPreviewExtenderImpl implements PreviewExtenderImpl {
     }
 
     @Override
-    public void init(String cameraId, CameraCharacteristics cameraCharacteristics) {
+    public void init(@NonNull String cameraId,
+            @NonNull CameraCharacteristics cameraCharacteristics) {
         throw new RuntimeException("Stub, replace with implementation.");
     }
 
+    @NonNull
     @Override
     public CaptureStageImpl getCaptureStage() {
         throw new RuntimeException("Stub, replace with implementation.");
     }
 
+    @NonNull
     @Override
     public ProcessorType getProcessorType() {
         throw new RuntimeException("Stub, replace with implementation.");
     }
 
+    @Nullable
     @Override
     public ProcessorImpl getProcessor() {
         throw new RuntimeException("Stub, replace with implementation.");
     }
 
     @Override
-    public void onInit(String cameraId, CameraCharacteristics cameraCharacteristics,
-            Context context) {
+    public void onInit(@NonNull String cameraId,
+            @NonNull CameraCharacteristics cameraCharacteristics,
+            @NonNull Context context) {
         throw new RuntimeException("Stub, replace with implementation.");
     }
 
@@ -72,21 +77,25 @@ public final class BokehPreviewExtenderImpl implements PreviewExtenderImpl {
         throw new RuntimeException("Stub, replace with implementation.");
     }
 
+    @Nullable
     @Override
     public CaptureStageImpl onPresetSession() {
         throw new RuntimeException("Stub, replace with implementation.");
     }
 
+    @Nullable
     @Override
     public CaptureStageImpl onEnableSession() {
         throw new RuntimeException("Stub, replace with implementation.");
     }
 
+    @Nullable
     @Override
     public CaptureStageImpl onDisableSession() {
         throw new RuntimeException("Stub, replace with implementation.");
     }
 
+    @Nullable
     @Override
     public List<Pair<Integer, Size[]>> getSupportedResolutions() {
         throw new RuntimeException("Stub, replace with implementation.");
