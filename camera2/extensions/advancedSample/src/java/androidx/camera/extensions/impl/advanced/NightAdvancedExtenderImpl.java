@@ -131,8 +131,9 @@ public class NightAdvancedExtenderImpl extends BaseAdvancedExtenderImpl {
             // Image Capture
             if (mCaptureOutputSurfaceConfig.getSurface() != null) {
 
-                // For this sample, JPEG_R or YCBCR_P010 will not be processed
-                if (isJpegR(mCaptureOutputSurfaceConfig)) {
+                // For this sample, DEPTH_JPEG, JPEG_R or YCBCR_P010 will not be processed
+                if (isJpegR(mCaptureOutputSurfaceConfig) ||
+                        isDepthJpeg(mCaptureOutputSurfaceConfig)) {
                     Camera2OutputConfigImplBuilder captureOutputConfigBuilder;
 
                     captureOutputConfigBuilder =
