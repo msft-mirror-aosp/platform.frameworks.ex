@@ -38,7 +38,6 @@ import android.hardware.camera2.extension.AdvancedExtender;
 import android.hardware.camera2.extension.CameraExtensionService;
 import android.hardware.camera2.extension.CharacteristicsMap;
 import android.hardware.camera2.extension.SessionProcessor;
-import android.hardware.camera2.params.ColorSpaceProfiles;
 import android.hardware.camera2.params.DynamicRangeProfiles;
 import android.hardware.camera2.params.StreamConfiguration;
 import android.hardware.camera2.params.StreamConfigurationDuration;
@@ -49,6 +48,7 @@ import android.util.Range;
 import android.util.Size;
 import androidx.annotation.GuardedBy;
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import com.android.internal.camera.flags.Flags;
 
@@ -98,6 +98,7 @@ public class EyesFreeVidService extends CameraExtensionService {
 
     public static class AdvancedExtenderEyesFreeImpl extends AdvancedExtender {
         private CameraCharacteristics mCameraCharacteristics;
+        private String mCameraId;
 
         public AdvancedExtenderEyesFreeImpl(@NonNull CameraManager cameraManager) {
             super(cameraManager);
@@ -112,6 +113,7 @@ public class EyesFreeVidService extends CameraExtensionService {
         @Override
         public void initialize(String cameraId, CharacteristicsMap map) {
             mCameraCharacteristics = map.get(cameraId);
+            mCameraId = cameraId;
         }
 
         @Override
@@ -174,6 +176,59 @@ public class EyesFreeVidService extends CameraExtensionService {
                 CaptureResult.JPEG_QUALITY, CaptureResult.JPEG_ORIENTATION
             };
             return Arrays.asList(CAPTURE_RESULT_SET);
+        }
+
+        @FlaggedApi(Flags.FLAG_EFV_CAPTURE_LATENCY)
+        @Nullable
+        @Override
+        public Range<Long> getEstimatedCaptureLatencyRangeMillis(@NonNull Size captureOutputSize,
+                int format) {
+            return null;
+        }
+
+        @FlaggedApi(Flags.FLAG_EFV_CAPTURE_LATENCY)
+        @Override
+        public boolean isCaptureProcessProgressAvailable() {
+            return true;
+        }
+
+        @FlaggedApi(Flags.FLAG_EFV_CAPTURE_LATENCY)
+        @Override
+        public boolean isPostviewAvailable() {
+            return true;
+        }
+
+        @FlaggedApi(Flags.FLAG_EFV_CAPTURE_LATENCY)
+        @NonNull
+        @Override
+        public Map<Integer, List<Size>> getSupportedPostviewOutputResolutions(
+                @NonNull Size captureSize) {
+            Map<Integer, List<Size>> ret =  new HashMap<>();
+
+            float targetAr = ((float) captureSize.getWidth()) / captureSize.getHeight();
+
+            List<Size> currFormatSizes = getSupportedCaptureOutputResolutions(
+                    mCameraId).get(ImageFormat.YUV_420_888);
+            if (currFormatSizes != null) {
+                List<Size> matches = new ArrayList<>();
+
+                for (Size s : currFormatSizes) {
+                    float ar = ((float) s.getWidth()) / s.getHeight();
+                    if ((s.equals(captureSize)) || (s.getWidth() > captureSize.getWidth())
+                            || (s.getHeight() > captureSize.getHeight()) ||
+                            (Math.abs(targetAr - ar) > .1f)) {
+                        continue;
+                    }
+
+                    matches.add(s);
+                }
+
+                if (!matches.isEmpty()) {
+                    ret.put(ImageFormat.YUV_420_888, matches);
+                }
+            }
+
+            return ret;
         }
 
         @FlaggedApi(Flags.FLAG_CAMERA_EXTENSIONS_CHARACTERISTICS_GET)
@@ -343,6 +398,34 @@ public class EyesFreeVidService extends CameraExtensionService {
         public List<CaptureResult.Key> getAvailableCaptureResultKeys(
                 String cameraId) {
             throw new RuntimeException("Extension not supported");
+        }
+
+        @FlaggedApi(Flags.FLAG_EFV_CAPTURE_LATENCY)
+        @Nullable
+        @Override
+        public Range<Long> getEstimatedCaptureLatencyRangeMillis(@NonNull Size captureOutputSize,
+                int format) {
+            return null;
+        }
+
+        @FlaggedApi(Flags.FLAG_EFV_CAPTURE_LATENCY)
+        @Override
+        public boolean isCaptureProcessProgressAvailable() {
+            return false;
+        }
+
+        @FlaggedApi(Flags.FLAG_EFV_CAPTURE_LATENCY)
+        @Override
+        public boolean isPostviewAvailable() {
+            return false;
+        }
+
+        @FlaggedApi(Flags.FLAG_EFV_CAPTURE_LATENCY)
+        @NonNull
+        @Override
+        public Map<Integer, List<Size>> getSupportedPostviewOutputResolutions(
+                @NonNull Size captureSize) {
+            return Map.of();
         }
 
         @FlaggedApi(Flags.FLAG_CAMERA_EXTENSIONS_CHARACTERISTICS_GET)

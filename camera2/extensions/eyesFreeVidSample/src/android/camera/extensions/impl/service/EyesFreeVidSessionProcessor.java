@@ -20,7 +20,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Queue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -29,22 +28,19 @@ import android.annotation.FlaggedApi;
 import android.annotation.NonNull;
 import android.camera.extensions.impl.service.EyesFreeVidService.AdvancedExtenderEyesFreeImpl;
 import android.graphics.ImageFormat;
-import android.graphics.PointF;
-import android.graphics.Rect;
 import android.hardware.camera2.CameraAccessException;
-import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CameraDevice;
 import android.hardware.camera2.CaptureFailure;
 import android.hardware.camera2.CaptureRequest;
 import android.hardware.camera2.CaptureResult;
 import android.hardware.camera2.TotalCaptureResult;
+import android.hardware.camera2.extension.CameraConfiguration;
 import android.hardware.camera2.extension.CameraOutputSurface;
 import android.hardware.camera2.extension.CharacteristicsMap;
 import android.hardware.camera2.extension.ExtensionConfiguration;
 import android.hardware.camera2.extension.ExtensionOutputConfiguration;
 import android.hardware.camera2.extension.RequestProcessor;
 import android.hardware.camera2.extension.SessionProcessor;
-import android.hardware.camera2.impl.CameraMetadataNative;
 import android.hardware.camera2.utils.SurfaceUtils;
 import android.media.Image;
 import android.media.ImageReader;
@@ -55,9 +51,9 @@ import android.os.IBinder;
 import android.util.Log;
 import android.util.Pair;
 import androidx.annotation.GuardedBy;
+import androidx.annotation.Nullable;
 
-import java.util.concurrent.atomic.AtomicBoolean;
-
+import com.android.internal.camera.flags.Flags;
 
 public class EyesFreeVidSessionProcessor extends SessionProcessor {
 
@@ -66,12 +62,14 @@ public class EyesFreeVidSessionProcessor extends SessionProcessor {
     protected static final int MAX_NUM_IMAGES = 10;
     protected static final int CAPTURE_OUTPUT_ID = 0;
     protected static final int PREVIEW_OUTPUT_ID = 1;
+    protected static final int POSTVIEW_OUTPUT_ID = 2;
 
     protected HandlerThread mHandlerThread;
     protected Handler mHandler;
 
     protected CameraOutputSurface mPreviewOutputSurfaceConfig;
     protected CameraOutputSurface mCaptureOutputSurfaceConfig;
+    protected CameraOutputSurface mPostviewutputSurfaceConfig;
 
     protected final Object mParametersLock = new Object();
     @GuardedBy("mParametersLock")
@@ -104,26 +102,45 @@ public class EyesFreeVidSessionProcessor extends SessionProcessor {
         mPreviewOutputSurfaceConfig = previewSurface;
         mCaptureOutputSurfaceConfig = imageCaptureSurface;
 
+        return initialize();
+    }
+
+    private @NonNull ExtensionConfiguration initialize() {
         List<ExtensionOutputConfiguration> outputs = new ArrayList<>();
 
-        if (imageCaptureSurface.getSurface() != null) {
-            List<CameraOutputSurface> captureList = new ArrayList<>(List.of(imageCaptureSurface));
+        if (mCaptureOutputSurfaceConfig.getSurface() != null) {
+            List<CameraOutputSurface> captureList =
+                    new ArrayList<>(List.of(mCaptureOutputSurfaceConfig));
 
             ExtensionOutputConfiguration captureConfig = new ExtensionOutputConfiguration(
                     captureList, CAPTURE_OUTPUT_ID, null, -1);
             outputs.add(captureConfig);
         }
 
+        if ((mPostviewutputSurfaceConfig != null) &&
+                (mPostviewutputSurfaceConfig.getSurface() != null)) {
+            List<CameraOutputSurface> captureList =
+                    new ArrayList<>(List.of(mPostviewutputSurfaceConfig));
+
+            ExtensionOutputConfiguration captureConfig = new ExtensionOutputConfiguration(
+                    captureList, POSTVIEW_OUTPUT_ID, null, -1);
+            outputs.add(captureConfig);
+        }
+
         // Register the image reader surface in the output configuration to process frames
         // before enqueueing them to the clients preview surface
-        if (previewSurface.getSurface() != null) {
-            mPreviewImageReader = ImageReader.newInstance(previewSurface.getSize().getWidth(),
-                    previewSurface.getSize().getHeight(), previewSurface.getImageFormat(),
-                    MAX_NUM_IMAGES, SurfaceUtils.getSurfaceUsage(previewSurface.getSurface()));
+        if (mPreviewOutputSurfaceConfig.getSurface() != null) {
+            mPreviewImageReader = ImageReader.newInstance(
+                    mPreviewOutputSurfaceConfig.getSize().getWidth(),
+                    mPreviewOutputSurfaceConfig.getSize().getHeight(),
+                    mPreviewOutputSurfaceConfig.getImageFormat(),
+                    MAX_NUM_IMAGES,
+                    SurfaceUtils.getSurfaceUsage(mPreviewOutputSurfaceConfig.getSurface()));
 
             CameraOutputSurface previewOutputSurface = new CameraOutputSurface(
-                    mPreviewImageReader.getSurface(), previewSurface.getSize());
-            previewOutputSurface.setDynamicRangeProfile(previewSurface.getDynamicRangeProfile());
+                    mPreviewImageReader.getSurface(), mPreviewOutputSurfaceConfig.getSize());
+            previewOutputSurface.setDynamicRangeProfile(
+                    mPreviewOutputSurfaceConfig.getDynamicRangeProfile());
             List<CameraOutputSurface> previewList = new ArrayList<>(List.of(previewOutputSurface));
 
             ExtensionOutputConfiguration previewConfig = new ExtensionOutputConfiguration(
@@ -134,12 +151,25 @@ public class EyesFreeVidSessionProcessor extends SessionProcessor {
         ExtensionConfiguration res = new ExtensionConfiguration(0 /*session type*/,
                 CameraDevice.TEMPLATE_PREVIEW, outputs, null);
 
-        if (imageCaptureSurface != null
-                && imageCaptureSurface.getImageFormat() == ImageFormat.YCBCR_P010) {
-            res.setColorSpace(imageCaptureSurface.getColorSpace());
+        if (mCaptureOutputSurfaceConfig != null
+                && mCaptureOutputSurfaceConfig.getImageFormat() == ImageFormat.YCBCR_P010) {
+            res.setColorSpace(mCaptureOutputSurfaceConfig.getColorSpace());
         }
 
         return res;
+    }
+
+    @FlaggedApi(Flags.FLAG_EFV_CAPTURE_LATENCY)
+    @androidx.annotation.NonNull
+    @Override
+    public ExtensionConfiguration initSession(@androidx.annotation.NonNull IBinder token,
+            @androidx.annotation.NonNull String cameraId,
+            @androidx.annotation.NonNull CharacteristicsMap map,
+            @androidx.annotation.NonNull CameraConfiguration config) {
+        mPreviewOutputSurfaceConfig = config.getPreviewOutputSurface();
+        mCaptureOutputSurfaceConfig = config.getStillCaptureOutputSurface();
+        mPostviewutputSurfaceConfig = config.getPostViewOutputSurface();
+        return initialize();
     }
 
     @Override
@@ -319,11 +349,20 @@ public class EyesFreeVidSessionProcessor extends SessionProcessor {
     @Override
     public int startMultiFrameCapture(@NonNull Executor executor,
             @NonNull CaptureCallback captureCallback) {
+        return startCapture(false /*isPostviewRequested*/, executor, captureCallback);
+    }
+
+    private int startCapture(boolean isPostviewRequested,
+            @androidx.annotation.NonNull Executor executor,
+            @androidx.annotation.NonNull CaptureCallback captureCallback) {
         List<Integer> outputConfigIds = new ArrayList<>(List.of(CAPTURE_OUTPUT_ID));
+        if (isPostviewRequested) {
+            outputConfigIds.add(POSTVIEW_OUTPUT_ID);
+        }
 
         RequestProcessor.Request requestRes;
         requestRes = new RequestProcessor.Request(outputConfigIds, convertParameterMapToList(),
-                    CameraDevice.TEMPLATE_PREVIEW);
+                CameraDevice.TEMPLATE_PREVIEW);
 
         final int seqId = mNextCaptureSequenceId.getAndIncrement();
 
@@ -362,6 +401,9 @@ public class EyesFreeVidSessionProcessor extends SessionProcessor {
             @Override
             public void onCaptureSequenceCompleted(int sequenceId, long frameNumber) {
                 captureCallback.onCaptureSequenceCompleted(seqId);
+                if (Flags.efvCaptureLatency()) {
+                    captureCallback.onCaptureProcessProgressUpdated(100);
+                }
             }
 
             @Override
@@ -378,6 +420,21 @@ public class EyesFreeVidSessionProcessor extends SessionProcessor {
 
         captureCallback.onCaptureProcessStarted(seqId);
         return seqId;
+    }
+
+    @FlaggedApi(Flags.FLAG_EFV_CAPTURE_LATENCY)
+    @Override
+    public int startMultiFrameCapture(boolean isPostviewRequested,
+            @androidx.annotation.NonNull Executor executor,
+            @androidx.annotation.NonNull CaptureCallback callback) {
+        return startCapture(isPostviewRequested, executor, callback);
+    }
+
+    @FlaggedApi(Flags.FLAG_EFV_CAPTURE_LATENCY)
+    @Nullable
+    @Override
+    public Pair<Long, Long> getRealtimeStillCaptureLatency() {
+        return null;
     }
 
     @Override
