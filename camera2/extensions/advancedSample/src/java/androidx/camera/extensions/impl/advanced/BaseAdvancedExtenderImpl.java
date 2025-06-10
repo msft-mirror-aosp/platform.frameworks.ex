@@ -568,7 +568,8 @@ public abstract class BaseAdvancedExtenderImpl implements AdvancedExtenderImpl {
             }
         }
 
-        protected void addCaptureRequestParameters(List<RequestProcessorImpl.Request> requestList) {
+        protected void addCaptureRequestParameters(List<RequestProcessorImpl.Request> requestList,
+                boolean isPostviewRequest) {
             RequestBuilder build = new RequestBuilder(mCaptureOutputConfig.getId(),
                     CameraDevice.TEMPLATE_STILL_CAPTURE, DEFAULT_CAPTURE_ID);
             applyParameters(build);
@@ -579,13 +580,18 @@ public abstract class BaseAdvancedExtenderImpl implements AdvancedExtenderImpl {
         @Override
         public int startCaptureWithPostview(@NonNull CaptureCallback captureCallback) {
             Log.d(TAG, "startCaptureWithPostview");
-            return startCapture(captureCallback);
+            return startCapture(true /*isPostviewRequest*/, captureCallback);
         }
 
         @Override
         public int startCapture(@NonNull CaptureCallback captureCallback) {
+            return startCapture(false /*isPostviewRequest*/, captureCallback);
+        }
+
+        private int startCapture(boolean isPostviewRequest,
+                @NonNull CaptureCallback captureCallback) {
             List<RequestProcessorImpl.Request> requestList = new ArrayList<>();
-            addCaptureRequestParameters(requestList);
+            addCaptureRequestParameters(requestList, isPostviewRequest);
             final int seqId = mNextCaptureSequenceId.getAndIncrement();
 
             RequestProcessorImpl.Callback callback = new RequestProcessorImpl.Callback() {
@@ -610,7 +616,7 @@ public abstract class BaseAdvancedExtenderImpl implements AdvancedExtenderImpl {
 
                     addCaptureResultKeys(seqId, totalCaptureResult, captureCallback);
 
-                    if (mPostviewOutputSurfaceConfig != null) {
+                    if (isPostviewRequest && mPostviewOutputSurfaceConfig != null) {
                         mPostviewCaptureCaptureResultImageMatcher.setCameraCaptureCallback(
                             totalCaptureResult,
                             requestProcessorRequest.getCaptureStageId());
@@ -653,7 +659,7 @@ public abstract class BaseAdvancedExtenderImpl implements AdvancedExtenderImpl {
 
             mRequestProcessor.submit(requestList, callback);
 
-            if (mPostviewOutputSurfaceConfig != null &&
+            if (isPostviewRequest && mPostviewOutputSurfaceConfig != null &&
                     mPostviewOutputSurfaceConfig.getSurface() != null) {
                 mRequestProcessor.setImageProcessor(mPostviewOutputConfig.getId(),
                         new ImageProcessorImpl() {
