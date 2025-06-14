@@ -96,7 +96,8 @@ public class HdrAdvancedExtenderImpl extends BaseAdvancedExtenderImpl {
         }
 
         @Override
-        protected void addCaptureRequestParameters(List<RequestProcessorImpl.Request> requestList) {
+        protected void addCaptureRequestParameters(List<RequestProcessorImpl.Request> requestList,
+                boolean isPostviewRequest) {
             // Under exposed capture
             RequestBuilder builderUnder = new RequestBuilder(mCaptureOutputConfig.getId(),
                     CameraDevice.TEMPLATE_STILL_CAPTURE, UNDER_EXPOSED_CAPTURE_ID);
@@ -130,9 +131,9 @@ public class HdrAdvancedExtenderImpl extends BaseAdvancedExtenderImpl {
         public int startCapture(@NonNull CaptureCallback captureCallback) {
             List<RequestProcessorImpl.Request> requestList = new ArrayList<>();
             if (mProcessCapture) {
-                addCaptureRequestParameters(requestList);
+                addCaptureRequestParameters(requestList, false /*isPostviewRequest*/);
             } else {
-                super.addCaptureRequestParameters(requestList);
+                super.addCaptureRequestParameters(requestList, false /*isPostviewRequest*/);
             }
             final int seqId = mNextCaptureSequenceId.getAndIncrement();
 

@@ -109,12 +109,13 @@ public class AutoAdvancedExtenderImpl extends BaseAdvancedExtenderImpl {
         }
 
         @Override
-        protected void addCaptureRequestParameters(List<RequestProcessorImpl.Request> requestList) {
+        protected void addCaptureRequestParameters(List<RequestProcessorImpl.Request> requestList,
+                boolean isPostviewRequest) {
             RequestBuilder build = new RequestBuilder(mCaptureOutputConfig.getId(),
                     CameraDevice.TEMPLATE_STILL_CAPTURE, DEFAULT_CAPTURE_ID);
             build.setParameters(CaptureRequest.CONTROL_AWB_MODE, AWB_MODE_DAYLIGHT);
 
-            if (mPostviewOutputSurfaceConfig.getSurface() != null) {
+            if (isPostviewRequest && mPostviewOutputSurfaceConfig.getSurface() != null) {
                 build.addTargetOutputConfigIds(mPostviewOutputConfig.getId());
             }
 
