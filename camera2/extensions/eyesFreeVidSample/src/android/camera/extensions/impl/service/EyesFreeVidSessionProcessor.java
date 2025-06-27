@@ -433,7 +433,7 @@ public class EyesFreeVidSessionProcessor extends SessionProcessor {
     @FlaggedApi(Flags.FLAG_EFV_CAPTURE_LATENCY)
     @Nullable
     @Override
-    public Pair<Long, Long> getRealtimeStillCaptureLatency() {
+    public CaptureLatencyInfo getRealtimeStillCaptureLatency() {
         return null;
     }
 
