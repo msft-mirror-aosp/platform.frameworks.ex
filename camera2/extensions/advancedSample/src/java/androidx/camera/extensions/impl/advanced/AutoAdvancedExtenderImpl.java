@@ -102,12 +102,6 @@ public class AutoAdvancedExtenderImpl extends BaseAdvancedExtenderImpl {
         public AutoAdvancedSessionProcessor() {
             appendTag("::Auto");
         }
-
-        @Override
-        protected void addSessionParameter(Camera2SessionConfigImplBuilder builder) {
-            builder.addSessionParameter(CaptureRequest.CONTROL_AWB_MODE, AWB_MODE_DAYLIGHT);
-        }
-
         @Override
         protected void addCaptureRequestParameters(List<RequestProcessorImpl.Request> requestList,
                 boolean isPostviewRequest) {

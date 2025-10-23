@@ -67,12 +67,6 @@ public class BeautyAdvancedExtenderImpl extends BaseAdvancedExtenderImpl {
         public BeautyAdvancedSessionProcessor() {
             appendTag("::Beauty");
         }
-
-        @Override
-        protected void addSessionParameter(Camera2SessionConfigImplBuilder builder) {
-            builder.addSessionParameter(CaptureRequest.CONTROL_AWB_MODE, AWB_MODE_TWILIGHT);
-        }
-
         @Override
         protected void addCaptureRequestParameters(List<RequestProcessorImpl.Request> requestList,
                 boolean isPostviewRequest) {
