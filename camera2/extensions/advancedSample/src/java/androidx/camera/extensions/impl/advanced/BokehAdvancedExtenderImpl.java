@@ -73,12 +73,6 @@ public class BokehAdvancedExtenderImpl extends BaseAdvancedExtenderImpl {
         public BokehAdvancedSessionProcessor() {
             appendTag("::Bokeh");
         }
-
-        @Override
-        protected void addSessionParameter(Camera2SessionConfigImplBuilder builder) {
-            builder.addSessionParameter(CaptureRequest.CONTROL_AWB_MODE, AWB_MODE_SHADE);
-        }
-
         @Override
         protected void addCaptureRequestParameters(List<RequestProcessorImpl.Request> requestList,
                 boolean isPostviewRequest) {

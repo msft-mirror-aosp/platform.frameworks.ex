@@ -90,7 +90,8 @@ public class NightAdvancedExtenderImpl extends BaseAdvancedExtenderImpl {
         public Camera2SessionConfigImpl initSession(@NonNull String cameraId,
                 @NonNull Map<String, CameraCharacteristics> cameraCharacteristicsMap,
                 @NonNull Context context,
-                @NonNull OutputSurfaceConfigurationImpl surfaceConfigs) {
+                @NonNull OutputSurfaceConfigurationImpl surfaceConfigs,
+                @NonNull Map<CaptureRequest.Key<?>, Object> sessionParameters) {
 
             Log.d(TAG, "initSession cameraId=" + cameraId);
 
@@ -175,14 +176,9 @@ public class NightAdvancedExtenderImpl extends BaseAdvancedExtenderImpl {
             }
 
             builder.setColorSpace(surfaceConfigs.getColorSpace());
-            addSessionParameter(builder);
+            addSessionParameters(builder, sessionParameters);
 
             return builder.build();
-        }
-
-        @Override
-        protected void addSessionParameter(Camera2SessionConfigImplBuilder builder) {
-            builder.addSessionParameter(CaptureRequest.CONTROL_AWB_MODE, AWB_MODE_INCANDESCENT);
         }
 
         @Override

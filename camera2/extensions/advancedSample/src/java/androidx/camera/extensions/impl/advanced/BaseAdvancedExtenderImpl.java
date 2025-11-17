@@ -192,7 +192,8 @@ public abstract class BaseAdvancedExtenderImpl implements AdvancedExtenderImpl {
         public Camera2SessionConfigImpl initSession(@NonNull String cameraId,
                 @NonNull Map<String, CameraCharacteristics> cameraCharacteristicsMap,
                 @NonNull Context context,
-                @NonNull OutputSurfaceConfigurationImpl surfaceConfigs) {
+                @NonNull OutputSurfaceConfigurationImpl surfaceConfigs,
+                Map<CaptureRequest.Key<?>, Object> sessionParameters) {
 
             Log.d(TAG, "initSession cameraId=" + cameraId);
 
@@ -283,9 +284,20 @@ public abstract class BaseAdvancedExtenderImpl implements AdvancedExtenderImpl {
             }
 
             builder.setColorSpace(surfaceConfigs.getColorSpace());
-            addSessionParameter(builder);
+            addSessionParameters(builder, sessionParameters);
 
             return builder.build();
+        }
+
+        @Override
+        public Camera2SessionConfigImpl initSession(
+                String cameraId,
+                Map<String, CameraCharacteristics> cameraCharacteristicsMap,
+                Context context,
+                OutputSurfaceConfigurationImpl surfaceConfigs) {
+
+            return initSession(cameraId, cameraCharacteristicsMap, context, surfaceConfigs,
+                    null);
         }
 
         @Override
@@ -306,8 +318,20 @@ public abstract class BaseAdvancedExtenderImpl implements AdvancedExtenderImpl {
             return initSession(cameraId, cameraCharacteristicsMap, context, surfaceConfigs);
         }
 
-        protected void addSessionParameter(Camera2SessionConfigImplBuilder builder) {
-            // default empty implementation
+        protected void addSessionParameters(Camera2SessionConfigImplBuilder builder,
+                Map<CaptureRequest.Key<?>, Object> sessionParameters) {
+            List<CaptureRequest.Key<?>> supportedParams =
+                    mCameraCharacteristics.getAvailableSessionKeys();
+            if (sessionParameters != null && !sessionParameters.isEmpty()) {
+                for (CaptureRequest.Key key : sessionParameters.keySet()) {
+                    if (supportedParams.contains(key)) {
+                        Object value = sessionParameters.get(key);
+                        if (value != null) {
+                            builder.addSessionParameter(key, value);
+                        }
+                    }
+                }
+            }
         }
 
         @Override
