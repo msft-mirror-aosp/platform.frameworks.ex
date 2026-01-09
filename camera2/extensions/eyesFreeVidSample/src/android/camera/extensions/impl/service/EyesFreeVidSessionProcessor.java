@@ -16,6 +16,8 @@
 
 package android.camera.extensions.impl.service;
 
+import static org.junit.Assert.assertNull;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -146,6 +148,11 @@ public class EyesFreeVidSessionProcessor extends SessionProcessor {
             ExtensionOutputConfiguration previewConfig = new ExtensionOutputConfiguration(
                     previewList, PREVIEW_OUTPUT_ID, null, -1);
             outputs.add(previewConfig);
+
+            if (Flags.multiResolutionConcurrentReaders()) {
+                previewConfig.setMultiResolutionImageReader(null);
+                assertNull(previewConfig.getMultiResolutionImageReader());
+            }
         }
 
         ExtensionConfiguration res = new ExtensionConfiguration(0 /*session type*/,
@@ -169,6 +176,12 @@ public class EyesFreeVidSessionProcessor extends SessionProcessor {
         mPreviewOutputSurfaceConfig = config.getPreviewOutputSurface();
         mCaptureOutputSurfaceConfig = config.getStillCaptureOutputSurface();
         mPostviewutputSurfaceConfig = config.getPostViewOutputSurface();
+        if (Flags.vendorDefinedCameraExtensions()) {
+            Map<CaptureRequest.Key<?>, Object> sessionParams = config.getSessionWideParams();
+            if (!sessionParams.isEmpty()) {
+                config.setSessionWideParams(sessionParams);
+            }
+        }
         return initialize();
     }
 
